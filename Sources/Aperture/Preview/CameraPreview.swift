@@ -1,12 +1,6 @@
 import SwiftUI
 import AVFoundation
 
-#if os(macOS)
-package typealias PlatformView = NSView
-#elseif os(iOS)
-package typealias PlatformView = UIView
-#endif
-
 struct CameraPreview {
     var session: AVCaptureSession
     let preview = _PlatformViewBackedPreview()

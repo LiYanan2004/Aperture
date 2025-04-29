@@ -2,13 +2,13 @@ import SwiftUI
 
 extension View {
     func cameraPreviewFlip<E: Equatable>(trigger: E) -> some View {
-        modifier(CameraPreviewFlip(trigger: trigger))
+        modifier(CameraPreviewFlipAnimation(trigger: trigger))
     }
 }
 
-struct CameraPreviewFlip<E: Equatable>: ViewModifier {
+struct CameraPreviewFlipAnimation<E: Equatable>: ViewModifier {
     var trigger: E
-    @State private var initial = CameraPreviewFlipKeyFrame.start
+    @State private var initial = CameraPreviewFlippingSide.start
     
     func body(content: Content) -> some View {
         content
@@ -39,10 +39,10 @@ struct CameraPreviewFlip<E: Equatable>: ViewModifier {
     }
 }
 
-fileprivate struct CameraPreviewFlipKeyFrame: Equatable {
+fileprivate struct CameraPreviewFlippingSide: Equatable {
     var rotation3DAngle: Double
     var scale: CGFloat
     
-    static var start = CameraPreviewFlipKeyFrame(rotation3DAngle: 0, scale: 1)
-    static var end = CameraPreviewFlipKeyFrame(rotation3DAngle: -180, scale: 1)
+    static var start = CameraPreviewFlippingSide(rotation3DAngle: 0, scale: 1)
+    static var end = CameraPreviewFlippingSide(rotation3DAngle: -180, scale: 1)
 }

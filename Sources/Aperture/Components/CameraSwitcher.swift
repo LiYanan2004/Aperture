@@ -104,8 +104,6 @@ extension CameraSwitcher {
 #if os(iOS) && !targetEnvironment(macCatalyst)
 #Preview {
     CameraView { _ in
-        
-    } content: { _ in
         CameraSwitcher {
             Label("Switch Camera", systemImage: "arrow.triangle.2.circlepath")
                 .labelStyle(.titleAndIcon)

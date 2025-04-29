@@ -15,21 +15,12 @@ struct FocusRectangle: View {
     }
     var focusMode: FocusMode
     
-    enum ExposureBiasSide: Sendable, Equatable {
-        case left, right
-        var alignment: Alignment {
-            switch self {
-            case .left: .leading
-            case .right: .trailing
-            }
-        }
-    }
-    @State private var exposureBiasSide = ExposureBiasSide.right
+    @State private var exposureSliderAlignment: Alignment = .trailing
     @State private var isUnlocked = false
     @State private var exposureY = CGFloat.zero
     @State private var lastExposureY = CGFloat.zero
     
-    @State private var currentPhase: FocusRectanglePhase?
+    @State private var currentPhase: FocusPhase?
     private var opacity: Double { (currentPhase ?? .invisibleLarge).opacity }
     private var scale: CGFloat { (currentPhase ?? .invisibleLarge).scale }
     
@@ -67,7 +58,7 @@ struct FocusRectangle: View {
                     }
             }
             .aspectRatio(1, contentMode: .fit)
-            .overlay(alignment: exposureBiasSide.alignment) {
+            .overlay(alignment: exposureSliderAlignment) {
                 if focusMode != .autoFocus {
                     exposureSlider
                 }
@@ -84,7 +75,7 @@ struct FocusRectangle: View {
                             let previewWidth = proxy.bounds(of: .named("PREVIEW"))!.size.width
                             let trailingEdgeX = proxy.frame(in: .named("PREVIEW")).maxX
                             if trailingEdgeX + 36 > previewWidth {
-                                self.exposureBiasSide = .left
+                                self.exposureSliderAlignment = .leading
                             }
                         }
                 }
@@ -127,7 +118,7 @@ struct FocusRectangle: View {
         }
         .frame(width: 24)
         .padding(.vertical, -16)
-        .offset(x: exposureBiasSide == .right ? 32 : -32)
+        .padding(.horizontal, 32)
         .foregroundStyle(.yellow)
     }
     
@@ -255,17 +246,19 @@ struct FocusRectangle: View {
     }
 }
 
-struct FocusRectanglePhase: Equatable {
-    var opacity: Double
-    var scale: CGFloat
-
-    static let visibleExtraLarge = FocusRectanglePhase(opacity: 1, scale: 2)
-    static let visibleLarge = FocusRectanglePhase(opacity: 1, scale: 1.5)
-    static let dimmedLarge = FocusRectanglePhase(opacity: 0.5, scale: 1.5)
-    static let invisibleLarge = FocusRectanglePhase(opacity: 0, scale: 1.5)
-    static let normal = FocusRectanglePhase(opacity: 1, scale: 1)
-    static let dimmed = FocusRectanglePhase(opacity: 0.5, scale: 1)
-    static let idle = FocusRectanglePhase(opacity: 0.3, scale: 1)
+extension FocusRectangle {
+    struct FocusPhase: Equatable {
+        var opacity: Double
+        var scale: CGFloat
+        
+        static let visibleExtraLarge = FocusPhase(opacity: 1, scale: 2)
+        static let visibleLarge = FocusPhase(opacity: 1, scale: 1.5)
+        static let dimmedLarge = FocusPhase(opacity: 0.5, scale: 1.5)
+        static let invisibleLarge = FocusPhase(opacity: 0, scale: 1.5)
+        static let normal = FocusPhase(opacity: 1, scale: 1)
+        static let dimmed = FocusPhase(opacity: 0.5, scale: 1)
+        static let idle = FocusPhase(opacity: 0.3, scale: 1)
+    }
 }
 
 #if os(iOS)

@@ -8,7 +8,7 @@ import AVFoundation
 public struct FlashLightIndicator: View {
     @Environment(Camera.self) private var camera
     @Environment(\.deviceType) private var deviceType
-    @AppStorage("MEGAX_CAM_FLASH_MODE") private var userPreferedFlashMode: AVCaptureDevice.FlashMode = .auto
+    @AppStorage("Aperture_CAM_FLASH_MODE") private var userPreferedFlashMode: AVCaptureDevice.FlashMode = .auto
     
     private var accessibilityText: String {
         switch userPreferedFlashMode {
@@ -110,8 +110,6 @@ public struct FlashLightIndicator: View {
 #if os(iOS)
 #Preview {
     CameraView { _ in
-        
-    } content: { _ in
         FlashLightIndicator()
     }
 }

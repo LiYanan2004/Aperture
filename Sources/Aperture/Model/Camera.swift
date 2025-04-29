@@ -8,7 +8,7 @@ import OSLog
 @available(watchOS, unavailable)
 @available(visionOS, unavailable)
 public final class Camera: NSObject, @unchecked Sendable {
-    @ObservationIgnored internal let logger = Logger(subsystem: "MEGAX", category: "Camera")
+    @ObservationIgnored internal let logger = Logger(subsystem: "Aperture", category: "Camera")
     
     // MARK: Custom delegates & configurations
     @ObservationIgnored internal var errorHandler: ((CameraError) -> Void)?
@@ -33,7 +33,7 @@ public final class Camera: NSObject, @unchecked Sendable {
     public internal(set) var sessionState: SessionState = .notRunning
     
     internal let session = AVCaptureSession()
-    private var sessionQueue = DispatchQueue(label: "com.liyanan2004.megax.sessionQueue")
+    private var sessionQueue = DispatchQueue(label: "com.liyanan2004.Aperture.sessionQueue")
     internal var videoDevice: AVCaptureDevice? { videoDeviceInput?.device }
     internal var videoDeviceInput: AVCaptureDeviceInput!
     internal var photoOutput = AVCapturePhotoOutput()

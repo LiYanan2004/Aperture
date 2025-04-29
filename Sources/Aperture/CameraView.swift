@@ -6,21 +6,17 @@ import AVFoundation
 @available(watchOS, unavailable)
 @available(iOS 17.0, macOS 14.0, tvOS 17.0, *)
 public struct CameraView<Content: View>: View {
-    var errorHandler: ((_ error: CameraError) -> Void)?
     @ViewBuilder var content: (Camera) -> Content
     
     @Environment(\._captureConfiguration) private var configuration
-    @State var camera = Camera()
+    @State private var camera = Camera()
+    @State private var grantedPermission = false
     
     /// Creates a customized camera experience.
-    /// - Parameters:
-    ///     - errorHandler: The action to perform when error occurs.
-    ///     - content: The view builder that creates a customized camera experience.
+    /// - Parameter content: The view builder that creates a customized camera experience.
     public init(
-        errorHandler: ((CameraError) -> Void)? = nil,
         @ViewBuilder content: @escaping (Camera) -> Content
     ) {
-        self.errorHandler = errorHandler
         self.content = content
     }
     
@@ -31,13 +27,10 @@ public struct CameraView<Content: View>: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(.black, ignoresSafeAreaEdges: .all)
             .environment(\.colorScheme, .dark)
+            .disabled(!grantedPermission)
             .task {
                 #if !targetEnvironment(simulator)
-                guard await camera.grantedPermission else {
-                    errorHandler?(.permissionDenied)
-                    return
-                }
-                camera.errorHandler = errorHandler
+                grantedPermission = await camera.grantedPermission
                 camera.configuration = configuration
                 camera.startSession()
                 #endif
@@ -51,14 +44,7 @@ public struct CameraView<Content: View>: View {
 
 #if !os(watchOS) && !os(visionOS)
 #Preview {
-    CameraView { error in
-        switch error {
-        case .captureError(let error):
-            print("Capture Error: \(error.localizedDescription)")
-        case .permissionDenied:
-            print("User denied camera permission")
-        }
-    } content: { camera in
+    CameraView { camera in
         VStack {
             ViewFinder()
             ShutterButton { capturedPhoto in

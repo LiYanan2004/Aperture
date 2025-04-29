@@ -20,7 +20,7 @@ System camera experience that adapts to iPhone and iPad layout, like the system 
 >
 >```swift
 >import SwiftUI
->import MegaX
+>import Aperture
 >
 >@main
 >struct MyApp: App {
