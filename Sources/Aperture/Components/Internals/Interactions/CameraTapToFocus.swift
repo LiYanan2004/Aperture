@@ -5,9 +5,9 @@ extension View {
     @available(macOS, unavailable)
     @available(watchOS, unavailable)
     @available(visionOS, unavailable)
-    func cameraFocusable() -> some View {
-        #if os(iOS) || os(tvOS)
-        modifier(CameraFocusableModifier())
+    func allowsTapToFocus(_ flag: Bool = true) -> some View {
+        #if os(iOS)
+        modifier(_CameraTapToFocusModifier())
         #else
         self
         #endif
@@ -16,29 +16,29 @@ extension View {
 
 #if os(iOS) || os(tvOS)
 @available(macOS, unavailable)
-struct CameraFocusableModifier: ViewModifier {
-    @State private var showAutoFocusRectangle = false
-    @State private var manualFocusRectanglePosition: CGPoint?
+struct _CameraTapToFocusModifier: ViewModifier {
+    @State private var showAutoFocusIndicator = false
+    @State private var manualFocusIndicatorPosition: CGPoint?
     @Environment(Camera.self) private var camera
     
     @GestureState private var isTouching = false
-    @State private var manualFocusMode = FocusRectangle.FocusMode.manualFocus
+    @State private var manualFocusMode = FocusIndicator.FocusMode.manualFocus
     
     func body(content: Content) -> some View {
         content
             .overlay {
-                if let manualFocusRectanglePosition {
+                if let manualFocusIndicatorPosition {
                     GeometryReader { previewProxy in
-                        FocusRectangle(focusMode: manualFocusMode)
+                        FocusIndicator(focusMode: manualFocusMode)
                             .frame(width: 75, height: 75)
-                            .position(manualFocusRectanglePosition)
-                            .id("focus rectangle at (\(manualFocusRectanglePosition.x), \(manualFocusRectanglePosition.y))")
+                            .position(manualFocusIndicatorPosition)
+                            .id("focus rectangle at (\(manualFocusIndicatorPosition.x), \(manualFocusIndicatorPosition.y))")
                     }
                 }
             }
             .overlay {
-                if showAutoFocusRectangle {
-                    FocusRectangle(focusMode: .autoFocus)
+                if showAutoFocusIndicator {
+                    FocusIndicator(focusMode: .autoFocus)
                         .frame(width: 125, height: 125)
                 }
             }
@@ -57,18 +57,18 @@ struct CameraFocusableModifier: ViewModifier {
                     device.setExposureTargetBias(.zero)
                     device.isSubjectAreaChangeMonitoringEnabled = false
                 }
-                manualFocusRectanglePosition = nil
-                showAutoFocusRectangle = true
+                manualFocusIndicatorPosition = nil
+                showAutoFocusIndicator = true
                 Task {
                     try? await Task.sleep(for: .seconds(1))
                     withAnimation {
-                        showAutoFocusRectangle = false
+                        showAutoFocusIndicator = false
                     }
                 }
             }
             .onChange(of: camera.sessionState) {
                 if camera.sessionState == .committing {
-                    manualFocusRectanglePosition = nil
+                    manualFocusIndicatorPosition = nil
                 }
             }
     }
@@ -78,7 +78,7 @@ struct CameraFocusableModifier: ViewModifier {
             .onEnded {
                 camera.focusLocked = false
                 manualFocusMode = .manualFocus
-                manualFocusRectanglePosition = $0.location
+                manualFocusIndicatorPosition = $0.location
                 setAutoFocus(at: $0.location)
             }
     }
@@ -93,7 +93,7 @@ struct CameraFocusableModifier: ViewModifier {
                         
                         guard self.isTouching else { return }
                         manualFocusMode = .manualFocusLocking
-                        manualFocusRectanglePosition = point
+                        manualFocusIndicatorPosition = point
                         setAutoFocus(at: point)
                         
                         try await Task.sleep(for: .seconds(0.4))

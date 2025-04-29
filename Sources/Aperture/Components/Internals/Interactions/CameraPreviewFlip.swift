@@ -1,12 +1,12 @@
 import SwiftUI
 
 extension View {
-    func cameraPreviewFlip<E: Equatable>(trigger: E) -> some View {
-        modifier(CameraPreviewFlipAnimation(trigger: trigger))
+    func cameraPreviewFlipEffect<E: Equatable>(trigger: E) -> some View {
+        modifier(_CameraPreviewFlipEffectModifier(trigger: trigger))
     }
 }
 
-struct CameraPreviewFlipAnimation<E: Equatable>: ViewModifier {
+struct _CameraPreviewFlipEffectModifier<E: Equatable>: ViewModifier {
     var trigger: E
     @State private var initial = CameraPreviewFlippingSide.start
     

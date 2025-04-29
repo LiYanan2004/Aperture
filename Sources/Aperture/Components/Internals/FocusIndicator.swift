@@ -4,7 +4,7 @@ import AVFoundation
 @available(macOS, unavailable)
 @available(visionOS, unavailable)
 @available(watchOS, unavailable)
-struct FocusRectangle: View {
+struct FocusIndicator: View {
     enum FocusMode: Sendable, Equatable {
         case autoFocus
         case manualFocus
@@ -172,7 +172,7 @@ struct FocusRectangle: View {
                 }
             }
             .onEnded { _ in
-                updateFocusRectangle()
+                updateFocusIndicator()
                 if let device = camera.videoDevice {
                     device.unlockForConfiguration()
                 }
@@ -182,7 +182,7 @@ struct FocusRectangle: View {
     }
     
     @Sendable private func trackFocusState() async {
-        defer { updateFocusRectangle() }
+        defer { updateFocusIndicator() }
         
         #if targetEnvironment(simulator)
         try? await Task.sleep(for: .seconds(2))
@@ -227,7 +227,7 @@ struct FocusRectangle: View {
         #endif
     }
     
-    private func updateFocusRectangle() {
+    private func updateFocusIndicator() {
         guard !Task.isCancelled else { return }
         guard focusMode == .manualFocus else { return }
         
@@ -246,7 +246,8 @@ struct FocusRectangle: View {
     }
 }
 
-extension FocusRectangle {
+@available(macOS, unavailable)
+extension FocusIndicator {
     struct FocusPhase: Equatable {
         var opacity: Double
         var scale: CGFloat
@@ -263,7 +264,7 @@ extension FocusRectangle {
 
 #if os(iOS)
 #Preview {
-    FocusRectangle(focusMode: .manualFocusLocking)
+    FocusIndicator(focusMode: .manualFocusLocking)
         .frame(width: 100, height: 100)
         .preferredColorScheme(.dark)
         .environment(Camera())

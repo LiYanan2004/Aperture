@@ -20,7 +20,11 @@ public struct ViewFinder: View {
     
     public var body: some View {
         #if os(watchOS) || os(visionOS)
+        #if DEBUG
         fatalError("Current Operating System doesn't support ViewFinder.")
+        #else
+        EmptyView()
+        #endif
         #else
         @Bindable var camera = camera
         camera.cameraPreview
@@ -30,15 +34,15 @@ public struct ViewFinder: View {
                 Rectangle().fill(.fill)
             }
             #endif
-            .cameraPreviewFlip(trigger: camera.cameraSide)
+            .cameraPreviewFlipEffect(trigger: camera.cameraSide)
             .rotation3DEffect(
                 .degrees(camera.sessionState == .running && camera.isFrontCamera ? 180 : 0),
                 axis: (x: 0.0, y: 1.0, z: 0.0),
                 perspective: 0
             )
             #if os(iOS) || os(tvOS)
-            .cameraFocusable()
-            .cameraZoomFactor()
+            .allowsTapToFocus()
+            .allowsCameraZooming()
             #endif
             .opacity(1 - camera.dimCameraPreview)
             .layoutPriority(1)
@@ -59,7 +63,7 @@ public struct ViewFinder: View {
             #if os(iOS)
             .overlay(alignment: isPhone ? .bottom : .leading) {
                 if includingOpticalZoomButtons {
-                    CameraOpticalZoomOptionsBox().padding()
+                    CameraZoomLevelPicker().padding()
                 }
             }
             #endif

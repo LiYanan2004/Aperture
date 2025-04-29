@@ -8,7 +8,8 @@ import SwiftUI
 @available(macOS, unavailable)
 @available(watchOS, unavailable)
 @available(visionOS, unavailable)
-@available(iOS 17.0, tvOS 17.0, *)
+@available(tvOS, unavailable)
+@available(iOS 17.0, *)
 public struct SystemCameraExperience: View {
     var action: (CapturedPhoto) -> Void
     @Environment(Camera.self) private var camera

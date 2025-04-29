@@ -247,7 +247,7 @@ public final class Camera: NSObject, @unchecked Sendable {
     internal var backCameraDefaultZoomFactor: CGFloat = 1
     internal var frontCameraDefaultZoomFactor: CGFloat = 1
     
-    #if os(iOS) || os(tvOS)
+    @available(macOS, unavailable)
     func setZoomFactor(
         _ zoomFactor: CGFloat,
         withRate rate: Float? = nil,
@@ -268,7 +268,6 @@ public final class Camera: NSObject, @unchecked Sendable {
             }
         }
     }
-    #endif
     
     // MARK: - Focus
     /// A boolean value indicates whether the focus lock is enabled.

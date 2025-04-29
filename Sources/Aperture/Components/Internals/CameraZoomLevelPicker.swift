@@ -1,7 +1,7 @@
 #if os(iOS)
 import SwiftUI
 
-struct CameraOpticalZoomOptionsBox: View {
+struct CameraZoomLevelPicker: View {
     @State private var showDefault = true
     @Environment(Camera.self) private var model
     private var backCameraOpticalFactors: [CGFloat] {
@@ -154,7 +154,7 @@ struct CameraOpticalZoomOptionButton: View {
 }
 
 #Preview {
-    CameraOpticalZoomOptionsBox()
+    CameraZoomLevelPicker()
         .environment(Camera())
 }
 #endif

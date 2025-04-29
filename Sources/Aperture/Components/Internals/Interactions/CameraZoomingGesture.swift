@@ -4,34 +4,45 @@ extension View {
     @available(macOS, unavailable)
     @available(watchOS, unavailable)
     @available(visionOS, unavailable)
-    func cameraZoomFactor() -> some View {
-        #if os(iOS) || os(tvOS)
-        modifier(CameraZoomModifier())
-        #else
-        self
-        #endif
+    @ViewBuilder
+    func allowsCameraZooming(_ flag: Bool = true) -> some View {
+        if flag {
+            modifier(_CameraZoomingGestureModifier())
+        } else {
+            self
+        }
     }
 }
 
-#if os(iOS) || os(tvOS)
-struct CameraZoomModifier: ViewModifier {
-    @State var initialFactor: CGFloat?
+struct _CameraZoomingGestureModifier: ViewModifier {
+    @State private var initialFactor: CGFloat?
     @Environment(Camera.self) private var camera
     
     private var minZoomFactor: CGFloat {
+        #if os(iOS)
         camera.videoDevice?.minAvailableVideoZoomFactor ?? 1
+        #else
+        1
+        #endif
     }
     private var maxZoomFactor: CGFloat {
+        #if os(iOS)
         5.0 * CGFloat(truncating: camera.videoDevice?.virtualDeviceSwitchOverVideoZoomFactors.last ?? 1)
+        #else
+        1
+        #endif
     }
     
     func body(content: Content) -> some View {
         content
+            #if os(iOS)
             .simultaneousGesture(zoomGesture)
+            #endif
     }
     
+    #if os(iOS)
     @MainActor
-    var zoomGesture: some Gesture {
+    private var zoomGesture: some Gesture {
         MagnifyGesture()
             .onChanged { value in
                 if initialFactor == nil {
@@ -61,5 +72,5 @@ struct CameraZoomModifier: ViewModifier {
                 initialFactor = nil
             }
     }
+    #endif
 }
-#endif
