@@ -15,7 +15,16 @@ struct FocusIndicator: View {
     }
     var focusMode: FocusMode
     
-    @State private var exposureSliderAlignment: Alignment = .trailing
+    enum ExposureBiasSide: Sendable, Equatable {
+        case left, right
+        var alignment: Alignment {
+            switch self {
+            case .left: .leading
+            case .right: .trailing
+            }
+        }
+    }
+    @State private var exposureBiasSide = ExposureBiasSide.right
     @State private var isUnlocked = false
     @State private var exposureY = CGFloat.zero
     @State private var lastExposureY = CGFloat.zero
@@ -58,7 +67,7 @@ struct FocusIndicator: View {
                     }
             }
             .aspectRatio(1, contentMode: .fit)
-            .overlay(alignment: exposureSliderAlignment) {
+            .overlay(alignment: exposureBiasSide.alignment) {
                 if focusMode != .autoFocus {
                     exposureSlider
                 }
@@ -75,7 +84,7 @@ struct FocusIndicator: View {
                             let previewWidth = proxy.bounds(of: .named("PREVIEW"))!.size.width
                             let trailingEdgeX = proxy.frame(in: .named("PREVIEW")).maxX
                             if trailingEdgeX + 36 > previewWidth {
-                                self.exposureSliderAlignment = .leading
+                                self.exposureBiasSide = .left
                             }
                         }
                 }
@@ -89,6 +98,7 @@ struct FocusIndicator: View {
                     currentPhase = .normal
                 }
             }
+            .environment(\.layoutDirection, .leftToRight)
     }
     
     private var exposureSlider: some View {
@@ -118,7 +128,7 @@ struct FocusIndicator: View {
         }
         .frame(width: 24)
         .padding(.vertical, -16)
-        .padding(.horizontal, 32)
+        .offset(x: exposureBiasSide == .right ? 32 : -32)
         .foregroundStyle(.yellow)
     }
     
@@ -268,5 +278,6 @@ extension FocusIndicator {
         .frame(width: 100, height: 100)
         .preferredColorScheme(.dark)
         .environment(CameraManager())
+        .coordinateSpace(.named("PREVIEW"))
 }
 #endif
