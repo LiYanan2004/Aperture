@@ -5,6 +5,30 @@ import SwiftUI
 @available(visionOS, unavailable)
 @available(iOS 17.0, macOS 14.0, tvOS 17.0, *)
 public struct ViewFinder: CameraControl {
+    public enum AspectRatio: Sendable {
+        /// 4:3 aspect ratio.
+        case fourByThree
+        /// 16:9 aspect ratio.
+        case sixteenByNine
+        /// 1:1 aspect ratio.
+        case square
+        /// Custom aspect ratio.
+        case custom(CGFloat)
+        
+        var portraitAspectRatio: CGFloat {
+            switch self {
+            case .fourByThree: 3 / 4
+            case .sixteenByNine: 9 / 16
+            case .square: 1
+            case .custom(let aspectRatio): aspectRatio
+            }
+        }
+        
+        var landscapeAspectRatio: CGFloat {
+            1 / portraitAspectRatio
+        }
+    }
+    var aspectRatio: AspectRatio
     var includingOpticalZoomButtons: Bool
     
     @Environment(\.deviceType) private var deviceType
@@ -13,13 +37,18 @@ public struct ViewFinder: CameraControl {
     /// Create a view finder for camera experience.
     /// - parameter includingOpticalZoomButtons: Adds optical zoom factor buttons to indicate current zoom factor and provide quick zooming. These buttons are only shown on iOS.
     /// - note: This view must be installed inside a ``Camera``.
-    public init(includingOpticalZoomButtons: Bool = false) {
+    public init(
+        aspectRatio: AspectRatio = .fourByThree,
+        includingOpticalZoomButtons: Bool = true
+    ) {
+        self.aspectRatio = aspectRatio
         self.includingOpticalZoomButtons = includingOpticalZoomButtons
     }
     
     public func makeBody(_ camera: CameraManager) -> some View {
         @Bindable var camera = camera
         camera.cameraPreview
+            .aspectRatio(aspectRatio.portraitAspectRatio, contentMode: .fit) // FIXME: Only respect portrait aspect ratio.
             .sensoryFeedback(.selection, trigger: camera.cameraSide)
             .blur(radius: camera.sessionState == .running ? 0 : 15, opaque: true)
             #if targetEnvironment(simulator)
@@ -38,7 +67,6 @@ public struct ViewFinder: CameraControl {
             .allowsCameraZooming()
             #endif
             .opacity(1 - camera.dimCameraPreview)
-            .layoutPriority(1)
             .overlay(alignment: .bottomLeading) {
                 if camera.macroControlVisible {
                     Toggle(isOn: $camera.autoSwitchToMacroLens) {
@@ -84,5 +112,11 @@ public struct ViewFinder: CameraControl {
                     }
                     .opacity(isPhone ? 1 : 0)
             }
+    }
+}
+
+#Preview {
+    Camera {
+        ViewFinder()
     }
 }

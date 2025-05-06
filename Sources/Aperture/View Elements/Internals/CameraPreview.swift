@@ -12,9 +12,10 @@ extension CameraPreview: NSViewRepresentable {
         preview
     }
     
-    func updateNSView(_ nsView: _PlatformViewBackedPreview, context: Context) {
+    func updateNSView(_ view: _PlatformViewBackedPreview, context: Context) {
         DispatchQueue.main.async {
-            nsView.session = session
+            view.videoPreviewLayer.videoGravity = .resizeAspectFill
+            view.session = session
         }
     }
 }
@@ -24,9 +25,10 @@ extension CameraPreview: UIViewRepresentable {
         preview
     }
     
-    func updateUIView(_ nsView: _PlatformViewBackedPreview, context: Context) {
+    func updateUIView(_ view: _PlatformViewBackedPreview, context: Context) {
         DispatchQueue.main.async {
-            nsView.session = session
+            view.videoPreviewLayer.videoGravity = .resizeAspectFill
+            view.session = session
         }
     }
 }
