@@ -6,7 +6,7 @@ Built-in camera components and view to help you build your camera UI.
 
 ### Start Point
 
-- ``CameraView``
+- ``Camera``
 - ``CameraError``
 
 ### System Camera Experience
@@ -23,6 +23,6 @@ Built-in camera components and view to help you build your camera UI.
 
 ### Build Custom Camera Controls
 
-When you create a CameraView, you receive a camera object that reflects current camera status.
+When you create a Camera, you receive a camera object that reflects current camera status.
 
-- ``Camera``
+- ``CameraManager``

@@ -1,6 +1,6 @@
 import Foundation
 
-/// The error that might occurred when using CameraView.
+/// The error that might occurred when using Camera.
 public enum CameraError: Sendable, Error {
     /// User has denied camera permission.
     case permissionDenied

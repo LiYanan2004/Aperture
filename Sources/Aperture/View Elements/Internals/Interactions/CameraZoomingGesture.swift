@@ -16,7 +16,7 @@ extension View {
 
 struct _CameraZoomingGestureModifier: ViewModifier {
     @State private var initialFactor: CGFloat?
-    @Environment(Camera.self) private var camera
+    @Environment(CameraManager.self) private var camera
     
     private var minZoomFactor: CGFloat {
         #if os(iOS)

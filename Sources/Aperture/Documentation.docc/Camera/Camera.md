@@ -1,10 +1,10 @@
-# ``Camera``
+# ``CameraManager``
 
 ## Overview
 
-Camera is an object with Observation. It serves as the source of truth of a single CameraView.
+Camera is an object with Observation. It serves as the source of truth of a single Camera.
 
-Access `Camera` object inside CameraView view builder, using it to start or stop the session, capture photo and more.
+Access `CameraManager` object inside Camera view builder, using it to start or stop the session, capture photo and more.
 
 ## Topics
 

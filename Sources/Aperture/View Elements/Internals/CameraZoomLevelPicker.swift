@@ -3,7 +3,7 @@ import SwiftUI
 
 struct CameraZoomLevelPicker: View {
     @State private var showDefault = true
-    @Environment(Camera.self) private var model
+    @Environment(CameraManager.self) private var model
     private var backCameraOpticalFactors: [CGFloat] {
         model.backCameraOpticalZoomFactors
     }
@@ -86,7 +86,7 @@ struct CameraOpticalZoomOptionButton: View {
     var defaultSelection: Bool
     var showDefault: Bool
     
-    @Environment(Camera.self) private var model
+    @Environment(CameraManager.self) private var model
     @ScaledMetric(relativeTo: .headline) private var size = 28
     private var currentZoomFactor: CGFloat {
         #if targetEnvironment(simulator)
@@ -155,6 +155,6 @@ struct CameraOpticalZoomOptionButton: View {
 
 #Preview {
     CameraZoomLevelPicker()
-        .environment(Camera())
+        .environment(CameraManager())
 }
 #endif

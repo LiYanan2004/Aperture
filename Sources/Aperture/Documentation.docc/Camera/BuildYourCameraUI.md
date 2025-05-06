@@ -4,7 +4,7 @@ Build your camera UI with flexibility.
 
 ## Overview
 
-CameraView allows you to focus on bringing great capture experience.
+Camera allows you to focus on bringing great capture experience.
 
 With built-in views and simple modifiers, you can build your camera experience with ease.
 

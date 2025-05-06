@@ -7,12 +7,11 @@ import OSLog
 @Observable
 @available(watchOS, unavailable)
 @available(visionOS, unavailable)
-public final class Camera: NSObject, @unchecked Sendable {
-    @ObservationIgnored internal let logger = Logger(subsystem: "Aperture", category: "Camera")
-    
+public final class CameraManager: NSObject, @unchecked Sendable {
+    @ObservationIgnored package let logger = Logger(subsystem: "Aperture", category: "Camera")
     // MARK: Custom delegates & configurations
     @ObservationIgnored internal var errorHandler: ((CameraError) -> Void)?
-    @ObservationIgnored internal var configuration = CameraCaptureConfiguration()
+    @ObservationIgnored internal var configuration = CaptureConfiguration()
     
     // MARK: UI states
     /// A boolean value indicates whether the shutter should be disabled.
@@ -103,7 +102,7 @@ public final class Camera: NSObject, @unchecked Sendable {
         }
     }
     
-    func updateSession(with configuration: CameraCaptureConfiguration) {
+    func updateSession(with configuration: CaptureConfiguration) {
         self.configuration = configuration
         sessionQueue.async { [weak self] in
             guard let self else { return }
@@ -116,7 +115,7 @@ public final class Camera: NSObject, @unchecked Sendable {
             
             #if (os(iOS) || os(tvOS)) && !targetEnvironment(macCatalyst)
             configureMultitaskAccess()
-            configurePreferedStabilizationMode()
+            configurePreviewStatabilizationMode()
             #endif
         }
     }
@@ -328,19 +327,14 @@ public final class Camera: NSObject, @unchecked Sendable {
     @available(watchOS, unavailable)
     @available(visionOS, unavailable)
     private func findDevice(position: AVCaptureDevice.Position) -> AVCaptureDevice? {
-        #if os(watchOS) || os(visionOS)
-        fatalError("Unsupported platforms.")
-        let preferedDeviceTypes: [AVCaptureDevice.DeviceType]? = nil
-        #else
         let preferedDeviceTypes = configuration.captureDeviceTypes
-        #endif
         #if os(macOS)
         var deviceTypes = preferedDeviceTypes ?? [.builtInWideAngleCamera, .continuityCamera]
         #else
         var deviceTypes = preferedDeviceTypes ?? [.builtInTripleCamera, .builtInDualCamera, .builtInDualWideCamera, .builtInWideAngleCamera]
         #endif
         if #available(iOS 18.0, macOS 15.0, tvOS 18.0, macCatalyst 18.0, *),
-            configuration.preferConstantColor {
+           configuration.captureOptions.contains(.constantColor) {
             #if os(macOS)
             deviceTypes = [.builtInWideAngleCamera]
             #else
@@ -420,7 +414,7 @@ public final class Camera: NSObject, @unchecked Sendable {
         #if (os(iOS) || os(tvOS)) && !targetEnvironment(macCatalyst)
         configureAvailableOpticalZoomsAndDefaultZoomsForCameras()
         configureMultitaskAccess()
-        configurePreferedStabilizationMode()
+        configurePreviewStatabilizationMode()
         #endif
     }
    
@@ -432,7 +426,7 @@ public final class Camera: NSObject, @unchecked Sendable {
             }
             #endif
             guard !device.fallbackPrimaryConstituentDevices.isEmpty else { return }
-            let enabled = enabled ?? self.configuration.autoSwitchingLens
+            let enabled = enabled ?? self.configuration.autoLensSwitching
             device.setPrimaryConstituentDeviceSwitchingBehavior(
                 enabled ? .auto : .locked,
                 restrictedSwitchingBehaviorConditions: []
@@ -442,28 +436,28 @@ public final class Camera: NSObject, @unchecked Sendable {
     
     private func configurePhotoOutput() {
         #if !os(watchOS) && !os(visionOS)
-        photoOutput.maxPhotoQualityPrioritization = configuration.preferedQualityPrioritization
+        photoOutput.maxPhotoQualityPrioritization = configuration.photoSettings.qualityPrioritization
         let supportedMaxDimensions = self.videoDeviceInput.device.activeFormat.supportedMaxPhotoDimensions
         photoOutput.maxPhotoDimensions = supportedMaxDimensions.last!
         #endif
         
         #if os(iOS) && !targetEnvironment(macCatalyst)
         if photoOutput.isAutoDeferredPhotoDeliverySupported {
-            photoOutput.isAutoDeferredPhotoDeliveryEnabled = configuration.preferAutoDeferredPhotoDelivery
+            photoOutput.isAutoDeferredPhotoDeliveryEnabled = configuration.captureOptions.contains(.autoDeferredPhotoDelivery)
         }
         #endif
         if photoOutput.isZeroShutterLagSupported {
-            photoOutput.isZeroShutterLagEnabled = configuration.preferZeroShutterLag
+            photoOutput.isZeroShutterLagEnabled = configuration.captureOptions.contains(.zeroShutterLag)
         }
         if photoOutput.isResponsiveCaptureSupported {
-            photoOutput.isResponsiveCaptureEnabled = configuration.preferResponsiveCapture
+            photoOutput.isResponsiveCaptureEnabled = configuration.captureOptions.contains(.responsiveCapture)
             if photoOutput.isFastCapturePrioritizationSupported {
-                photoOutput.isFastCapturePrioritizationEnabled = configuration.preferFastCapturePrioritization
+                photoOutput.isFastCapturePrioritizationEnabled = configuration.captureOptions.contains(.fastCapturePrioritization)
             }
         }
         if #available(iOS 18.0, macOS 15.0, tvOS 18.0, macCatalyst 18.0, *) {
             if photoOutput.isConstantColorSupported {
-                photoOutput.isConstantColorEnabled = configuration.preferConstantColor
+                photoOutput.isConstantColorEnabled = configuration.captureOptions.contains(.constantColor)
             }
         }
     }
@@ -471,18 +465,16 @@ public final class Camera: NSObject, @unchecked Sendable {
     private func createPhotoSettings() -> AVCapturePhotoSettings {
         let photoSettings = AVCapturePhotoSettings()
         photoSettings.maxPhotoDimensions = self.photoOutput.maxPhotoDimensions
-        #if !os(watchOS) && !os(visionOS)
-        photoSettings.photoQualityPrioritization = configuration.preferedQualityPrioritization
+        photoSettings.photoQualityPrioritization = configuration.photoSettings.qualityPrioritization
         if photoOutput.supportedFlashModes.contains(flashMode) {
             photoSettings.flashMode = flashMode
         } else {
             self.flashMode = .off
         }
-        #endif
         
         repeat {
             if #available(iOS 18.0, macOS 15.0, tvOS 18.0, macCatalyst 18.0, *),
-               configuration.preferConstantColor {
+               configuration.captureOptions.contains(.constantColor) {
                 if photoOutput.isConstantColorSupported == false {
                     logger.error("[Constant Color] Current device doesn't support constant color.")
                     break
@@ -491,8 +483,8 @@ public final class Camera: NSObject, @unchecked Sendable {
                     break
                 }
                 
-                photoSettings.isConstantColorEnabled = configuration.preferConstantColor
-                photoSettings.isConstantColorFallbackPhotoDeliveryEnabled = configuration.enableConstantColorFallbackDelivery
+                photoSettings.isConstantColorEnabled = configuration.captureOptions.contains(.constantColor)
+                photoSettings.isConstantColorFallbackPhotoDeliveryEnabled = configuration.captureOptions.contains(.constantColorFallbackDelivery)
             }
         } while false
         
@@ -607,14 +599,14 @@ public final class Camera: NSObject, @unchecked Sendable {
     @available(macCatalyst, unavailable)
     private func configureMultitaskAccess() {
         if session.isMultitaskingCameraAccessSupported {
-            session.isMultitaskingCameraAccessEnabled = configuration.captureWhenMultiTasking
+            session.isMultitaskingCameraAccessEnabled = configuration.multiTasking
         }
     }
     
-    private func configurePreferedStabilizationMode() {
+    private func configurePreviewStatabilizationMode() {
         for connection in session.connections {
-            guard connection.isVideoStabilizationSupported else { continue }
-            connection.preferredVideoStabilizationMode = configuration.stabilizationMode
+            guard connection.videoPreviewLayer != nil else { continue }
+            connection.preferredVideoStabilizationMode = configuration.previewStabilizationMode
         }
     }
     #endif

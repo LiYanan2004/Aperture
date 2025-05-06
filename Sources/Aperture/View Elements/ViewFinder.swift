@@ -4,30 +4,23 @@ import SwiftUI
 @available(watchOS, unavailable)
 @available(visionOS, unavailable)
 @available(iOS 17.0, macOS 14.0, tvOS 17.0, *)
-public struct ViewFinder: View {
+public struct ViewFinder: CameraControl {
     var includingOpticalZoomButtons: Bool
     
-    @Environment(Camera.self) private var camera
     @Environment(\.deviceType) private var deviceType
     private var isPhone: Bool { deviceType == .phone }
     
     /// Create a view finder for camera experience.
-    /// - parameter includingOpticalZoomButtons: Adds optical zoom factor buttons to indicate current zoom factor and provide quick zooming. Only shows on iOS.
-    /// - note: This view must be installed inside a ``CameraView``.
+    /// - parameter includingOpticalZoomButtons: Adds optical zoom factor buttons to indicate current zoom factor and provide quick zooming. These buttons are only shown on iOS.
+    /// - note: This view must be installed inside a ``Camera``.
     public init(includingOpticalZoomButtons: Bool = false) {
         self.includingOpticalZoomButtons = includingOpticalZoomButtons
     }
     
-    public var body: some View {
-        #if os(watchOS) || os(visionOS)
-        #if DEBUG
-        fatalError("Current Operating System doesn't support ViewFinder.")
-        #else
-        EmptyView()
-        #endif
-        #else
+    public func makeBody(_ camera: CameraManager) -> some View {
         @Bindable var camera = camera
         camera.cameraPreview
+            .sensoryFeedback(.selection, trigger: camera.cameraSide)
             .blur(radius: camera.sessionState == .running ? 0 : 15, opaque: true)
             #if targetEnvironment(simulator)
             .overlay {
@@ -91,6 +84,5 @@ public struct ViewFinder: View {
                     }
                     .opacity(isPhone ? 1 : 0)
             }
-        #endif
     }
 }

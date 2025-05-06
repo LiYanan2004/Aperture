@@ -4,11 +4,11 @@ Customize your camera experience with view modifiers.
 
 ## Overview
 
-With CameraView, you can use following modifiers to select camera, adjust capture pipelines and more.
+With Camera, you can use following modifiers to select camera, adjust capture pipelines and more.
 
 ### Select Appropriate Devices
 
-By default, CameraView automatically uses virtual composed device, namely all cameras in the specific position.
+By default, Camera automatically uses virtual composed device, namely all cameras in the specific position.
 
 - For iPhone SE, uses `.builtInWideAngleCamera` by default.
 - For iPhone Xs series and iPhone Xr, uses `.builtInDualCamera` by default.
@@ -30,7 +30,7 @@ For more details of these APIs, check out [Create a more responsive camera exper
 > tip: 
 >
 > **Decide which feature to opt-in, that's it.** 
-> When you use these modifiers, you don't need to take care of the eligibility. The only thing you need to think of is whether you want to enable these features, and CameraView will try to do so if the device is capable.
+> When you use these modifiers, you don't need to take care of the eligibility. The only thing you need to think of is whether you want to enable these features, and Camera will try to do so if the device is capable.
 
 **Auto Deferred Photo Delivery**
 

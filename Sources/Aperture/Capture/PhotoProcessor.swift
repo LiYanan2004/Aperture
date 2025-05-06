@@ -8,7 +8,7 @@ final class PhotoProcessor: NSObject, AVCapturePhotoCaptureDelegate {
     private let logger = Logger(subsystem: "Aperture", category: "PhotoProcessor")
     
     private var continuation: CheckedContinuation<CapturedPhoto, Never>!
-    private weak var camera: Camera?
+    private weak var camera: CameraManager?
     private var capturedPhoto: CapturedPhoto? {
         willSet {
             guard let newValue else { return }
@@ -16,7 +16,7 @@ final class PhotoProcessor: NSObject, AVCapturePhotoCaptureDelegate {
         }
     }
     
-    func setup(continuation: CheckedContinuation<CapturedPhoto, Never>, camera: Camera) {
+    func setup(continuation: CheckedContinuation<CapturedPhoto, Never>, camera: CameraManager) {
         self.continuation = continuation
         self.camera = camera
     }

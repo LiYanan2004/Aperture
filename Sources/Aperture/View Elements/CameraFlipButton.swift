@@ -1,3 +1,10 @@
+//
+//  CameraFlipButton.swift
+//  Aperture
+//
+//  Created by Yanan Li on 2025/5/6.
+//
+
 import SwiftUI
 
 /// A button that flips your camera view.
@@ -7,12 +14,11 @@ import SwiftUI
 @available(macOS, unavailable)
 @available(macCatalyst, unavailable)
 @available(iOS 17.0, tvOS 17.0, *)
-public struct CameraSwitcher<Label: View>: View {
+public struct CameraFlipButton<Label: View>: CameraControl {
     @ViewBuilder var label: () -> Label
-    @Environment(Camera.self) private var camera
     
     /// Create a button that switches between rear camera and front camera.
-    /// - note: This view must be installed inside a ``CameraView``.
+    /// - note: This view must be installed inside a ``Camera``.
     public init() where Label == SwiftUI.Label<Text, Image> {
         self.label = {
             SwiftUI.Label("Switch Camera", systemImage: "arrow.triangle.2.circlepath")
@@ -20,12 +26,12 @@ public struct CameraSwitcher<Label: View>: View {
     }
     
     /// Create a button that switches between rear camera and front camera.
-    /// - note: This view must be installed inside a ``CameraView``.
+    /// - note: This view must be installed inside a ``Camera``.
     public init(@ViewBuilder _ label: @escaping () -> Label) {
         self.label = label
     }
-    
-    public var body: some View {
+
+    public func makeBody(_ camera: CameraManager) -> some View {
         Button(action: camera.toggleCamera, label: label)
             .labelStyle(.iconOnly)
             .imageScale(.large)
@@ -39,11 +45,12 @@ public struct CameraSwitcher<Label: View>: View {
 @available(tvOS, unavailable)
 @available(macOS, unavailable)
 @available(macCatalyst, unavailable)
-extension CameraSwitcher {
+@available(iOS 17.0, tvOS 17.0, *)
+extension CameraFlipButton {
     /// Create a button that switches between rear camera and front camera.
     /// - parameters:
     ///     - titleKey: A title generated from a localized string. This is for accessibility.
-    /// - note: This view must be installed inside a ``CameraView``.
+    /// - note: This view must be installed inside a ``Camera``.
     public init(_ titleKey: LocalizedStringKey, systemImage: String) where Label == SwiftUI.Label<Text, Image> {
         self.label = {
             SwiftUI.Label(titleKey, systemImage: systemImage)
@@ -53,7 +60,7 @@ extension CameraSwitcher {
     /// Create a button that switches between rear camera and front camera.
     /// - parameters:
     ///     - titleKey: A title generated from a localized string. This is for accessibility.
-    /// - note: This view must be installed inside a ``CameraView``.
+    /// - note: This view must be installed inside a ``Camera``.
     public init(_ titleKey: LocalizedStringKey, image: String) where Label == SwiftUI.Label<Text, Image> {
         self.label = {
             SwiftUI.Label(titleKey, image: image)
@@ -63,7 +70,7 @@ extension CameraSwitcher {
     /// Create a button that switches between rear camera and front camera.
     /// - parameters:
     ///     - titleKey: A title generated from a localized string. This is for accessibility.
-    /// - note: This view must be installed inside a ``CameraView``.
+    /// - note: This view must be installed inside a ``Camera``.
     public init(_ titleKey: LocalizedStringKey, image: ImageResource) where Label == SwiftUI.Label<Text, Image> {
         self.label = {
             SwiftUI.Label(titleKey, image: image)
@@ -73,7 +80,7 @@ extension CameraSwitcher {
     /// Create a button that switches between rear camera and front camera.
     /// - parameters:
     ///     - title: A string used as the label’s title. This is for accessibility.
-    /// - note: This view must be installed inside a ``CameraView``.
+    /// - note: This view must be installed inside a ``Camera``.
     public init(_ title: String, systemImage: String) where Label == SwiftUI.Label<Text, Image> {
         self.label = {
             SwiftUI.Label(title, systemImage: systemImage)
@@ -83,7 +90,7 @@ extension CameraSwitcher {
     /// Create a button that switches between rear camera and front camera.
     /// - parameters:
     ///     - title: A string used as the label’s title. This is for accessibility.
-    /// - note: This view must be installed inside a ``CameraView``.
+    /// - note: This view must be installed inside a ``Camera``.
     public init(_ title: String, image: String) where Label == SwiftUI.Label<Text, Image> {
         self.label = {
             SwiftUI.Label(title, image: image)
@@ -93,7 +100,7 @@ extension CameraSwitcher {
     /// Create a button that switches between rear camera and front camera.
     /// - parameters:
     ///     - title: A string used as the label’s title. This is for accessibility.
-    /// - note: This view must be installed inside a ``CameraView``.
+    /// - note: This view must be installed inside a ``Camera``.
     public init(_ title: String, image: ImageResource) where Label == SwiftUI.Label<Text, Image> {
         self.label = {
             SwiftUI.Label(title, image: image)
@@ -101,13 +108,12 @@ extension CameraSwitcher {
     }
 }
 
-#if os(iOS) && !targetEnvironment(macCatalyst)
+@available(macOS, unavailable)
 #Preview {
-    CameraView { _ in
-        CameraSwitcher {
+    Camera {
+        CameraFlipButton {
             Label("Switch Camera", systemImage: "arrow.triangle.2.circlepath")
                 .labelStyle(.titleAndIcon)
         }
     }
 }
-#endif

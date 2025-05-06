@@ -5,8 +5,7 @@ import AVFoundation
 @available(watchOS, unavailable)
 @available(visionOS, unavailable)
 @available(iOS 17.0, macOS 14.0, tvOS 17.0, *)
-public struct FlashLightIndicator: View {
-    @Environment(Camera.self) private var camera
+public struct FlashLightIndicator: CameraControl {
     @Environment(\.deviceType) private var deviceType
     @AppStorage("Aperture_CAM_FLASH_MODE") private var userPreferedFlashMode: AVCaptureDevice.FlashMode = .auto
     
@@ -28,10 +27,10 @@ public struct FlashLightIndicator: View {
     ///
     /// This view can automatically determine whether to show itself based on the current capture device capability.
     ///
-    /// - note: This view must be installed inside a ``CameraView``.
+    /// - note: This view must be installed inside a ``Camera``.
     public init() { }
     
-    public var body: some View {
+    public func makeBody(_ camera: CameraManager) -> some View {
         if camera.currentDeviceHasFlash {
             Button {
                 userPreferedFlashMode = switch userPreferedFlashMode {
@@ -107,10 +106,9 @@ public struct FlashLightIndicator: View {
     }
 }
 
-#if os(iOS)
+@available(macOS, unavailable)
 #Preview {
-    CameraView { _ in
+    Camera {
         FlashLightIndicator()
     }
 }
-#endif

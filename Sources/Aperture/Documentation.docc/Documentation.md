@@ -6,7 +6,7 @@ Integrate camera experience into your SwiftUI apps.
 
 Aperture provides a simple SwiftUI solution for developers, with adavanced capture features like zero-shutter lag, responsive capture, and more.
 
-Create a simple camera experience by directly using ``CameraView`` + ``SystemCameraExperience``. Create your own camera experiences inside the view builder closure of ``CameraView``. Apply modifiers to ``CameraView`` to customize capture configurations.
+Create a simple camera experience by directly using ``Camera`` + ``SystemCameraExperience``. Create your own camera experiences inside the view builder closure of ``Camera``. Apply modifiers to ``Camera`` to customize capture configurations.
 
 ## Topics
 

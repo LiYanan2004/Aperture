@@ -19,7 +19,7 @@ extension View {
 struct _CameraTapToFocusModifier: ViewModifier {
     @State private var showAutoFocusIndicator = false
     @State private var manualFocusIndicatorPosition: CGPoint?
-    @Environment(Camera.self) private var camera
+    @Environment(CameraManager.self) private var camera
     
     @GestureState private var isTouching = false
     @State private var manualFocusMode = FocusIndicator.FocusMode.manualFocus

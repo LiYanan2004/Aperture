@@ -4,25 +4,26 @@ import SwiftUI
 @available(watchOS, unavailable)
 @available(visionOS, unavailable)
 @available(iOS 17.0, macOS 14.0, tvOS 17.0, *)
-public struct ShutterButton: View {
+public struct ShutterButton: CameraControl {
     var action: (CapturedPhoto) -> Void
     
-    @Environment(Camera.self) private var camera
     @State private var counter = 0
     
     /// Create a shutter button for photo capturing.
     /// - parameter action: The action to perform when captured photo arrives.
-    /// - note: This view must be installed inside a ``CameraView``.
+    /// - note: This view must be installed inside a ``Camera``.
     public init(action: @escaping (CapturedPhoto) -> Void) {
         self.action = action
     }
     
-    public var body: some View {
+    public func makeBody(_ camera: CameraManager) -> some View {
         Rectangle()
             .fill(.clear)
             .aspectRatio(1, contentMode: .fit)
             .overlay {
-                Button(action: capturePhoto) {
+                Button {
+                    camera.capturePhoto(completionHandler: action)
+                } label: {
                     Circle()
                         .fill(.white)
                         .opacity(camera.isBusyProcessing ? 0 : 1)
@@ -50,18 +51,12 @@ public struct ShutterButton: View {
             .disabled(camera.shutterDisabled)
             .frame(maxWidth: 72)
     }
-    
-    private func capturePhoto() {
-        camera.capturePhoto(completionHandler: action)
-    }
 }
 
-#if !os(watchOS) && !os(visionOS)
 #Preview {
-    CameraView { camera in
+    Camera {
         ShutterButton { photo in
             // Process captured photo here.
         }
     }
 }
-#endif

@@ -5,25 +5,24 @@ import AVFoundation
 @available(visionOS, unavailable)
 @available(watchOS, unavailable)
 @available(iOS 17.0, macOS 14.0, tvOS 17.0, *)
-public struct CameraView<Content: View>: View {
-    @ViewBuilder var content: (Camera) -> Content
+public struct Camera<Content: View>: View {
+    @ViewBuilder var content: () -> Content
     
-    @Environment(\._captureConfiguration) private var configuration
-    @State private var camera = Camera()
+    @Environment(\.captureConfiguration) private var configuration
+    @State private var camera = CameraManager()
     @State private var grantedPermission = false
     
     /// Creates a customized camera experience.
     /// - Parameter content: The view builder that creates a customized camera experience.
     public init(
-        @ViewBuilder content: @escaping (Camera) -> Content
+        @ViewBuilder content: @escaping () -> Content
     ) {
         self.content = content
     }
     
     public var body: some View {
-        content(camera)
+        content()
             .environment(camera)
-            .sensoryFeedback(.selection, trigger: camera.cameraSide)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(.black, ignoresSafeAreaEdges: .all)
             .environment(\.colorScheme, .dark)
@@ -42,9 +41,20 @@ public struct CameraView<Content: View>: View {
     }
 }
 
-#if !os(watchOS) && !os(visionOS)
+extension Camera where Content == SystemCameraExperience {
+    /// Creates a customized camera experience.
+    /// - Parameter content: The view builder that creates a customized camera experience.
+    public init(
+        _ action: @escaping (CapturedPhoto) -> Void
+    ) {
+        self.content = {
+            SystemCameraExperience(action: action)
+        }
+    }
+}
+
 #Preview {
-    CameraView { camera in
+    Camera {
         VStack {
             ViewFinder()
             ShutterButton { capturedPhoto in
@@ -53,4 +63,3 @@ public struct CameraView<Content: View>: View {
         }
     }
 }
-#endif

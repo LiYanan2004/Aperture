@@ -26,7 +26,7 @@ struct FocusIndicator: View {
     
     @State private var focusTrackingTask: Task<Void, Error>?
     @State private var idleTimer: Task<Void, Error>?
-    @Environment(Camera.self) private var camera
+    @Environment(CameraManager.self) private var camera
     
     var body: some View {
         Rectangle()
@@ -267,6 +267,6 @@ extension FocusIndicator {
     FocusIndicator(focusMode: .manualFocusLocking)
         .frame(width: 100, height: 100)
         .preferredColorScheme(.dark)
-        .environment(Camera())
+        .environment(CameraManager())
 }
 #endif

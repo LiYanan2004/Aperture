@@ -12,7 +12,7 @@ import SwiftUI
 @available(iOS 17.0, *)
 public struct SystemCameraExperience: View {
     var action: (CapturedPhoto) -> Void
-    @Environment(Camera.self) private var camera
+    @Environment(CameraManager.self) private var camera
     
     @Namespace private var namespace
     @Environment(\.deviceType) private var deviceType
@@ -20,7 +20,7 @@ public struct SystemCameraExperience: View {
     
     /// Create an automatic capture experience which is similar to system camera.
     /// - parameter action: The action to perform when captured photo arrives.
-    /// - note: This view must be installed inside a ``CameraView``.
+    /// - note: This view must be installed inside a ``Camera``.
     public init(action: @escaping (CapturedPhoto) -> Void) {
         self.action = action
     }
@@ -60,7 +60,7 @@ public struct SystemCameraExperience: View {
                 ShutterButton(action: action)
                     .frame(maxWidth: compact ? 68 : .infinity)
                     .frame(maxWidth: .infinity)
-                    .overlay(alignment: .trailing) { cameraSwitchButton }
+                    .overlay(alignment: .trailing) { cameraFlipButton }
                     .padding(.horizontal, 20)
             }
             .ignoresSafeArea(edges: fullHeight < 700 ? .top : [])
@@ -83,7 +83,7 @@ public struct SystemCameraExperience: View {
             .overlay {
                 VStack(spacing: 40) {
                     statusBar
-                    cameraSwitchButton
+                    cameraFlipButton
                 }
                 .matchedGeometryEffect(id: "shutter_top", in: namespace, properties: .position, anchor: .bottom, isSource: false)
                 
@@ -126,8 +126,8 @@ public struct SystemCameraExperience: View {
             }
     }
     
-    private var cameraSwitchButton: some View {
-        CameraSwitcher()
+    private var cameraFlipButton: some View {
+        CameraFlipButton()
             .padding(12)
             .background(
                 isPhone ? AnyShapeStyle(.fill.tertiary) : AnyShapeStyle(.black.tertiary),
@@ -144,7 +144,7 @@ public struct SystemCameraExperience: View {
 
 #if os(iOS) && !targetEnvironment(macCatalyst)
 #Preview {
-    CameraView { camera in
+    Camera {
         SystemCameraExperience { capturedPhoto in
             
         }
