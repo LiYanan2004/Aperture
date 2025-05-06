@@ -41,6 +41,7 @@ public struct Camera<Content: View>: View {
     }
 }
 
+@available(macOS, unavailable)
 extension Camera where Content == SystemCameraExperience {
     /// Creates a customized camera experience.
     /// - Parameter content: The view builder that creates a customized camera experience.
