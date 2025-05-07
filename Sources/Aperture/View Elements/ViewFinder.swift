@@ -47,8 +47,11 @@ public struct ViewFinder: CameraControl {
     
     public func makeBody(_ camera: CameraManager) -> some View {
         @Bindable var camera = camera
-        camera.cameraPreview
+        Rectangle()
+            .fill(.clear)
             .aspectRatio(aspectRatio.portraitAspectRatio, contentMode: .fit) // FIXME: Only respect portrait aspect ratio.
+            .overlay { camera.cameraPreview }
+            .clipped()
             .sensoryFeedback(.selection, trigger: camera.cameraSide)
             .blur(radius: camera.sessionState == .running ? 0 : 15, opaque: true)
             #if targetEnvironment(simulator)
@@ -112,6 +115,7 @@ public struct ViewFinder: CameraControl {
                     }
                     .opacity(isPhone ? 1 : 0)
             }
+            .frame(maxWidth: .infinity)
     }
 }
 
