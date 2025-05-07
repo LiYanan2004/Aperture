@@ -51,7 +51,6 @@ public struct ViewFinder: CameraControl {
             .fill(.clear)
             .aspectRatio(aspectRatio.portraitAspectRatio, contentMode: .fit) // FIXME: Only respect portrait aspect ratio.
             .overlay { camera.cameraPreview }
-            .clipped()
             .sensoryFeedback(.selection, trigger: camera.cameraSide)
             .blur(radius: camera.sessionState == .running ? 0 : 15, opaque: true)
             #if targetEnvironment(simulator)
@@ -69,6 +68,7 @@ public struct ViewFinder: CameraControl {
             .allowsTapToFocus()
             .allowsCameraZooming()
             #endif
+            .clipped()
             .opacity(1 - camera.dimCameraPreview)
             .overlay(alignment: .bottomLeading) {
                 if camera.macroControlVisible {

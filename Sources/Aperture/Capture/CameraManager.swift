@@ -52,7 +52,7 @@ public final class CameraManager: NSObject, @unchecked Sendable {
     @ObservationIgnored private lazy var readinessCoordinator: AVCapturePhotoOutputReadinessCoordinator? = {
         #if os(iOS)
         let coordinator = AVCapturePhotoOutputReadinessCoordinator(
-            photoOutput: cameraManager.photoOutput
+            photoOutput: photoOutput
         )
         coordinator.delegate = self
         return coordinator
@@ -331,6 +331,8 @@ public final class CameraManager: NSObject, @unchecked Sendable {
             readinessCoordinator?.stopTrackingCaptureRequest(using: photoSettings.uniqueID)
         }
         return capturedPhotoData
+        #else
+        fatalError("Not Supported.")
         #endif
     }
     
