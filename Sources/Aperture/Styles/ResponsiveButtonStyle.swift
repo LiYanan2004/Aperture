@@ -67,14 +67,18 @@ package struct ResponsiveButtonStyle: PrimitiveButtonStyle {
                         if rect.contains(location) == false {
                             transaction.animation = .smooth(duration: 0.2)
                             scale = 1
-                            ignoreChanges = true // Ignore further updates.
-                            isPressing = false
+                            Task { @MainActor in
+                                ignoreChanges = true // Ignore further updates.
+                                isPressing = false
+                            }
                             return
                         }
                         
                         transaction.animation = .snappy(duration: 0.3)
                         scale = minimumScale
-                        isPressing = true
+                        Task { @MainActor in
+                            isPressing = true
+                        }
                     }
                     .onEnded { _ in
                         defer {
