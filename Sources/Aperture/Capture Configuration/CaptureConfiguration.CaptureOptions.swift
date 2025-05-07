@@ -43,6 +43,10 @@ extension CaptureConfiguration {
     ) -> CaptureConfiguration {
         var config = self
         var options = CaptureOptions.responsiveCapture
+        if flag {
+            // Zero shutter lag must be enabled to support responsive capture.
+            options.insert(.zeroShutterLag)
+        }
         if fastCapturePrioritizationEnabled {
             options.insert(.fastCapturePrioritization)
         }
