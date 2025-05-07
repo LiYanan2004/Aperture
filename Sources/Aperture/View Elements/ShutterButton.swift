@@ -22,7 +22,10 @@ public struct ShutterButton: CameraControl {
             .aspectRatio(1, contentMode: .fit)
             .overlay {
                 Button {
-                    camera.capturePhoto(completionHandler: action)
+                    Task {
+                        let capturedPhoto = try await camera.capturePhoto()
+                        action(capturedPhoto)
+                    }
                 } label: {
                     Circle()
                         .fill(.white)

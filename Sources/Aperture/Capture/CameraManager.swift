@@ -47,7 +47,20 @@ public final class CameraManager: NSObject, @unchecked Sendable {
     @ObservationIgnored private var videoRotationAngleForHorizonLevelPreviewObservation: NSKeyValueObservation?
     @ObservationIgnored private var videoRotationAngleForHorizonLevelCaptureObservation: NSKeyValueObservation?
     @ObservationIgnored private var sceneMonitoring: NSKeyValueObservation?
-    @ObservationIgnored private var readinessCoordinator: AVCapturePhotoOutputReadinessCoordinator!
+    
+    
+    @ObservationIgnored private lazy var readinessCoordinator: AVCapturePhotoOutputReadinessCoordinator? = {
+        #if os(iOS)
+        let coordinator = AVCapturePhotoOutputReadinessCoordinator(
+            photoOutput: cameraManager.photoOutput
+        )
+        coordinator.delegate = self
+        return coordinator
+        #else
+        nil
+        #endif
+    }()
+        
     
     // MARK: - Flash Light
     #if targetEnvironment(simulator)
@@ -301,25 +314,23 @@ public final class CameraManager: NSObject, @unchecked Sendable {
     // MARK: - Capture
     /// Capture photo using current active device.
     /// - parameter completionHandler: The action to perform after receiving captured photo.
-    public func capturePhoto(completionHandler: @escaping (CapturedPhoto) -> Void) {
+    public func capturePhoto() async -> CapturedPhoto {
         #if !targetEnvironment(simulator)
         let photoSettings = createPhotoSettings()
-        readinessCoordinator.startTrackingCaptureRequest(using: photoSettings)
+        readinessCoordinator?.startTrackingCaptureRequest(using: photoSettings)
         
         let videoRotationAngle = self.videoDeviceRotationCoordinator.videoRotationAngleForHorizonLevelCapture
         
-        Task {
-            if let photoOutputConnection = self.photoOutput.connection(with: .video) {
-                photoOutputConnection.videoRotationAngle = videoRotationAngle
-            }
-            let processor = PhotoProcessor()
-            let capturedPhotoData = await withCheckedContinuation { (continuation: CheckedContinuation<CapturedPhoto, Never>) in
-                processor.setup(continuation: continuation, camera: self)
-                photoOutput.capturePhoto(with: photoSettings, delegate: processor)
-                readinessCoordinator.stopTrackingCaptureRequest(using: photoSettings.uniqueID)
-            }
-            completionHandler(capturedPhotoData)
+        if let photoOutputConnection = self.photoOutput.connection(with: .video) {
+            photoOutputConnection.videoRotationAngle = videoRotationAngle
         }
+        let processor = PhotoProcessor()
+        let capturedPhotoData = await withCheckedContinuation { (continuation: CheckedContinuation<CapturedPhoto, Never>) in
+            processor.setup(continuation: continuation, camera: self)
+            photoOutput.capturePhoto(with: photoSettings, delegate: processor)
+            readinessCoordinator?.stopTrackingCaptureRequest(using: photoSettings.uniqueID)
+        }
+        return capturedPhotoData
         #endif
     }
     
@@ -403,12 +414,6 @@ public final class CameraManager: NSObject, @unchecked Sendable {
         if session.canAddOutput(photoOutput) {
             session.addOutput(photoOutput)
             configurePhotoOutput()
-        }
-        
-        let readinessCoordinator = AVCapturePhotoOutputReadinessCoordinator(photoOutput: photoOutput)
-        DispatchQueue.main.async {
-            self.readinessCoordinator = readinessCoordinator
-            readinessCoordinator.delegate = self
         }
         
         #if (os(iOS) || os(tvOS)) && !targetEnvironment(macCatalyst)
