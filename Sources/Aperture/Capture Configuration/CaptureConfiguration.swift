@@ -9,17 +9,17 @@ import SwiftUI
 import AVFoundation
 
 public struct CaptureConfiguration: Sendable, Equatable {
-    public var captureOptions: CaptureOptions = .default
-    public var multiTasking = false
-    public var autoLensSwitching = true
+    var captureOptions: CaptureOptions = .default
+    var multiTasking = false
+    var autoLensSwitching = true
     /// Prefered capture device types.
     /// - note: By default, it uses composed device type or wide-angle camera.
-    public var captureDeviceTypes: [AVCaptureDevice.DeviceType]? = nil
+    var captureDeviceTypes: [AVCaptureDevice.DeviceType]? = nil
     #if os(iOS)
     /// Prefered stabilization mode for current capture device.
     var previewStabilizationMode = AVCaptureVideoStabilizationMode.previewOptimized
     #endif
-    public var photoSettings = PhotoSettings()
+    var photoSettings = PhotoSettings()
     
     nonisolated public func multiTaskingEnabled(
         _ flag: Bool = true
