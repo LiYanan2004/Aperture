@@ -11,20 +11,15 @@ import SwiftUI
 
 @available(visionOS, unavailable)
 @available(watchOS, unavailable)
-final class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
-    private let logger = Logger(
-        subsystem: "Aperture",
-        category: "PhotoCaptureDelegate"
-    )
-    
+final class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate, Logging {
     private var continuation: CheckedContinuation<CapturedPhoto, Never>
-    private unowned var session: PhotoCaptureSession
+    private unowned var camera: Camera
     
     init(
-        session: PhotoCaptureSession,
+        camera: Camera,
         continuation: CheckedContinuation<CapturedPhoto, Never>
     ) {
-        self.session = session
+        self.camera = camera
         self.continuation = continuation
     }
     
@@ -40,9 +35,9 @@ final class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
         willCapturePhotoFor resolvedSettings: AVCaptureResolvedPhotoSettings
     ) {
         // Fully dim the preview and show it back.
-        session.previewDimming = true
+        camera.previewDimming = true
         withAnimation(.smooth(duration: 0.25)) {
-            session.previewDimming = false
+            camera.previewDimming = false
         }
     }
 

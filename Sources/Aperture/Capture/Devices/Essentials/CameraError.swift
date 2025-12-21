@@ -7,16 +7,19 @@
 
 import Foundation
 
-enum CameraError: LocalizedError {
+public enum CameraError: LocalizedError {
     case invalidCaptureDevice
     case permissionDenied
+    case sessionAlreadStarted
     
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
             case .invalidCaptureDevice:
                 "Invalid capture device is specified."
             case .permissionDenied:
                 "User denied the camera access."
+            case .sessionAlreadStarted:
+                "AVCaptureSession is currently running, no need to run it again."
         }
     }
 }

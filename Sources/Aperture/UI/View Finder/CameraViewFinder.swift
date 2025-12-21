@@ -9,7 +9,22 @@ import SwiftUI
 import AVFoundation
 
 public struct CameraViewFinder: View {
-    public var session: CameraSession
+    public var camera: Camera
+    
+    public enum VideoGravity: Sendable {
+        case fit
+        case fill
+        
+        var avLayerVideoGravity: AVLayerVideoGravity {
+            switch self {
+                case .fit:
+                    AVLayerVideoGravity.resizeAspect
+                case .fill:
+                    AVLayerVideoGravity.resizeAspectFill
+            }
+        }
+    }
+    public var videoGravity: VideoGravity
     
     public struct Gestures: OptionSet, Sendable {
         public var rawValue: UInt8
@@ -23,8 +38,13 @@ public struct CameraViewFinder: View {
     }
     public var gestures: Gestures
     
-    public init(session: CameraSession, gestures: Gestures = [.zoom, .focus]) {
-        self.session = session
+    public init(
+        camera: Camera,
+        videoGravity: VideoGravity = .fit,
+        gestures: Gestures = [.zoom, .focus]
+    ) {
+        self.camera = camera
+        self.videoGravity = videoGravity
         self.gestures = gestures
     }
     
@@ -33,46 +53,27 @@ public struct CameraViewFinder: View {
     public var body: some View {
         Rectangle()
             .fill(.clear)
-            .overlay { session.cameraPreview }
+            .overlay { camera.coordinator.cameraPreview }
             .overlay { dimmingLayer }
             .overlay { errorOverlay }
-            .task { await _runSession() }
-            .onDisappear {
-                session.captureSession.stopRunning()
+            .onChange(of: videoGravity, initial: true) {
+                camera.coordinator.cameraPreview.setVideoGravity(videoGravity.avLayerVideoGravity)
             }
             .overlay {
                 if gestures.contains(.focus) {
-                    _FocusGestureRespondingView(session: session)
+                    _FocusGestureRespondingView(camera: camera)
                 }
             }
             .simultaneousGesture(
-                _ZoomGesture(session: session),
+                _ZoomGesture(camera: camera),
                 /* name: "camera-zoom", */
                 isEnabled: gestures.contains(.zoom)
             )
             .clipped()
     }
-    
-    @MainActor
-    private func _runSession() async {
-        do {
-            try await self.session.setupSession()
-            session._setupRotationCoordinator()
-            let captureSession = session.captureSession
-            Task { @concurrent in
-                if !captureSession.isRunning {
-                    captureSession.startRunning()
-                }
-            }
-        } catch let error as CameraError {
-            self.cameraError = error
-        } catch {
-            session.logger.error("\(error)")
-        }
-    }
-    
+
     private var dimmingLayer: some View {
-        Color.black.opacity(session.previewDimming ? 1 : 0)
+        Color.black.opacity(camera.previewDimming ? 1 : 0)
     }
     
     @ViewBuilder

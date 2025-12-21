@@ -8,23 +8,23 @@
 import SwiftUI
 
 public struct CameraAdaptiveStack<Content: View>: View {
-    var session: CameraSession
+    var camera: Camera
     var spacing: CGFloat?
     @ViewBuilder var content: (CameraAdaptiveStackProxy) -> Content
 
     public init(
-        session: CameraSession,
+        camera: Camera,
         spacing: CGFloat? = nil,
         @ViewBuilder content: @escaping (CameraAdaptiveStackProxy) -> Content
     ) {
-        self.session = session
+        self.camera = camera
         self.spacing = spacing
         self.content = content
     }
     
     public var body: some View {
         let cameraLayoutProxy = CameraAdaptiveStackProxy(
-            interfaceRotationAngle: session.previewRotationAngle
+            interfaceRotationAngle: camera.previewRotationAngle
         )
         _VariadicView.Tree(
             _CameraStack(

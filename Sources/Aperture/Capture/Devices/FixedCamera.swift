@@ -7,7 +7,7 @@
 
 import AVFoundation
 
-public struct FixedCamera: Camera {
+public struct FixedCamera: CameraDevice {
     public var device: AVCaptureDevice?
     public var position: CameraPosition
     
@@ -24,7 +24,7 @@ public struct FixedCamera: Camera {
     }
 }
 
-extension Camera where Self == FixedCamera {
+extension CameraDevice where Self == FixedCamera {
     public static func fixed(deviceType: CameraDeviceType, position: CameraPosition) -> FixedCamera {
         .init(deviceType: deviceType, position: position)
     }

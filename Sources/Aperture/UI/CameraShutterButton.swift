@@ -12,8 +12,8 @@ import SwiftUI
 @available(visionOS, unavailable)
 @available(iOS 17.0, macOS 14.0, tvOS 17.0, *)
 public struct CameraShutterButton: View {
-    var session: PhotoCaptureSession
-    var configuration: PhotoConfiguration
+    var camera: Camera
+    var configuration: PhotoCaptureConfiguration
     var action: (CapturedPhoto) -> Void
     
     @State private var counter = 0
@@ -22,11 +22,11 @@ public struct CameraShutterButton: View {
     /// - parameter action: The action to perform when captured photo arrives.
     /// - note: This view must be installed inside a ``Camera``.
     public init(
-        session: PhotoCaptureSession,
-        configuration: PhotoConfiguration = .init(),
+        camera: Camera,
+        configuration: PhotoCaptureConfiguration = .init(),
         action: @escaping (CapturedPhoto) -> Void
     ) {
-        self.session = session
+        self.camera = camera
         self.configuration = configuration
         self.action = action
     }
@@ -46,22 +46,19 @@ public struct CameraShutterButton: View {
                 Circle()
                     .strokeBorder(.primary, lineWidth: 4)
             }
-            .disabled(session.shutterDisabled)
+            .disabled(camera.shutterDisabled)
             .frame(maxWidth: 72)
     }
     
     private var captureButton: some View {
         Button {
             Task {
-                try await action(
-                    session.takeStillPhoto(
-                        configuration: configuration
-                    )
-                )
+                let capturedPhoto = try await camera.takePhoto(configuration: configuration)
+                action(capturedPhoto)
             }
         } label: {
             Circle()
-                .opacity(session.isBusyProcessing ? 0 : 1)
+                .opacity(camera.isBusyProcessing ? 0 : 1)
                 .overlay {
                     ProgressView()
                         .progressViewStyle(.spinning)
@@ -69,16 +66,16 @@ public struct CameraShutterButton: View {
                             content.scaleEffect((72.0 - 12.0) / proxy.size.width)
                         }
                         .foregroundStyle(.black)
-                        .opacity(session.isBusyProcessing ? 1 : 0)
+                        .opacity(camera.isBusyProcessing ? 1 : 0)
                         .scaledToFill()
                 }
-                .animation(.smooth(duration: 0.15), value: session.isBusyProcessing)
+                .animation(.smooth(duration: 0.15), value: camera.isBusyProcessing)
         }
     }
 }
 
 #Preview {
-    CameraShutterButton(session: PhotoCaptureSession(camera: .standard)) { photo in
+    CameraShutterButton(camera: Camera(device: .standard, configuration: .photo)) { photo in
         // Process captured photo here.
     }
 }

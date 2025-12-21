@@ -1,5 +1,5 @@
 //
-//  Camera.swift
+//  CameraDevice.swift
 //  Aperture
 //
 //  Created by Yanan Li on 2025/12/14.
@@ -8,13 +8,18 @@
 import AVFoundation
 import Foundation
 
-@_typeEraser(AnyCamera)
-public protocol Camera: Identifiable, Equatable {
+@_typeEraser(AnyCameraDevice)
+@dynamicMemberLookup
+public protocol CameraDevice: Identifiable, Equatable {
     var device: AVCaptureDevice? { get }
     var position: CameraPosition { get }
 }
 
-extension Camera {
+extension CameraDevice {
+    public subscript<T>(dynamicMember keyPath: KeyPath<AVCaptureDevice?, T>) -> T {
+        device[keyPath: keyPath]
+    }
+    
     public var id: String? { device?.uniqueID }
     
     public var isFusionCamera: Bool {
@@ -26,19 +31,19 @@ extension Camera {
     }
 }
 
-// MARK: - AnyCamera
+// MARK: - AnyCameraDevice
 
-public struct AnyCamera: Camera {
+public struct AnyCameraDevice: CameraDevice {
     public var device: AVCaptureDevice?
     public var position: CameraPosition
     
-    public init<C: Camera>(_ camera: C) {
+    public init<C: CameraDevice>(_ camera: C) {
         self.device = camera.device
         self.position = camera.position
     }
     
     @inlinable
-    public init<T: Camera>(erasing camera: T) {
+    public init<T: CameraDevice>(erasing camera: T) {
         self.init(camera)
     }
 }

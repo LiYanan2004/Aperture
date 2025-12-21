@@ -10,7 +10,7 @@ import AVFoundation
 
 extension CameraViewFinder {
     struct _FocusGestureRespondingView: View {
-        var session: CameraSession
+        var camera: Camera
         
         @State private var focusGestureState = _CameraFocusGestureState()
         @GestureState private var isTouching = false
@@ -23,7 +23,7 @@ extension CameraViewFinder {
                 .overlay {
                     if let manualFocusIndicatorPosition = focusGestureState.manualFocusIndicatorPosition {
                         _FocusTargetBoundingBox(
-                            session: session,
+                            camera: camera,
                             focusMode: focusGestureState.manualFocusMode
                         )
                         .frame(width: 75, height: 75)
@@ -34,7 +34,7 @@ extension CameraViewFinder {
                 .overlay {
                     if focusGestureState.showsAutoFocusBoundingBox {
                         _FocusTargetBoundingBox(
-                            session: session,
+                            camera: camera,
                             focusMode: .autoFocus
                         )
                         .frame(width: 125, height: 125)
@@ -42,13 +42,13 @@ extension CameraViewFinder {
                 }
                 .coordinateSpace(.named("PREVIEW"))
                 .gesture(
-                    _TapToFocusGesture(session: session, state: focusGestureState),
+                    _TapToFocusGesture(session: camera, state: focusGestureState),
                     /* name: "camera-tap-to-focus", */
                     isEnabled: true
                 )
                 .gesture(
                     _TapHoldToLockFocusGesture(
-                        session: session,
+                        session: camera,
                         state: focusGestureState,
                         isTouching: $isTouching
                     ),
@@ -61,17 +61,20 @@ extension CameraViewFinder {
                     
                     focusGestureState.manualFocusMode = .manualFocusLocked
                 }
-                .onChange(of: session.captureSession.isRunning) {
+                .onChange(of: camera.isRunning) {
                     focusGestureState.manualFocusIndicatorPosition = nil
                 }
                 .onReceive(
                     NotificationCenter.default.publisher(for: .AVCaptureDeviceSubjectAreaDidChange)
                 ) { _ in
-                    session.withCurrentCaptureDevice { device in
-                        device.focusMode = .continuousAutoFocus
-                        device.exposureMode = .continuousAutoExposure
-                        device.setExposureTargetBias(.zero)
-                        device.isSubjectAreaChangeMonitoringEnabled = false
+                    let coordinator = camera.coordinator
+                    Task { @CameraActor in
+                        coordinator.withCurrentCaptureDevice { device in
+                            device.focusMode = .continuousAutoFocus
+                            device.exposureMode = .continuousAutoExposure
+                            device.setExposureTargetBias(.zero)
+                            device.isSubjectAreaChangeMonitoringEnabled = false
+                        }
                     }
                     focusGestureState.manualFocusIndicatorPosition = nil
                     focusGestureState.showsAutoFocusBoundingBox = true
@@ -93,44 +96,48 @@ extension CameraViewFinder {
     @Observable
     final class _CameraFocusGestureState {
         #if os(iOS)
-        typealias Session = CameraSession
+        typealias Session = Camera
         
         var showsAutoFocusBoundingBox = false
         var manualFocusIndicatorPosition: CGPoint?
         var manualFocusMode = _FocusTargetBoundingBox.FocusMode.manualFocus
         
         func setAutoFocus(at point: CGPoint, session: Session) {
-            let pointOfInterest = session.cameraPreview
+            let pointOfInterest = session.coordinator.cameraPreview
                 .preview
                 .videoPreviewLayer
                 .captureDevicePointConverted(fromLayerPoint: point)
             #if !targetEnvironment(simulator)
-            session.setManualFocus(
-                pointOfInterst: pointOfInterest,
-                focusMode: .autoFocus,
-                exposureMode: .autoExpose
-            )
+            Task { @CameraActor in
+                session.coordinator.setManualFocus(
+                    pointOfInterst: pointOfInterest,
+                    focusMode: .autoFocus,
+                    exposureMode: .autoExpose
+                )
+            }
             #endif
         }
         
         func setLockedFocus(at point: CGPoint, session: Session) {
-            let pointOfInterest = session.cameraPreview
+            let pointOfInterest = session.coordinator.cameraPreview
                 .preview
                 .videoPreviewLayer
                 .captureDevicePointConverted(fromLayerPoint: point)
             #if !targetEnvironment(simulator)
-            session.setManualFocus(
-                pointOfInterst: pointOfInterest,
-                focusMode: .locked,
-                exposureMode: .locked
-            )
+            Task { @CameraActor in
+                session.coordinator.setManualFocus(
+                    pointOfInterst: pointOfInterest,
+                    focusMode: .locked,
+                    exposureMode: .locked
+                )
+            }
             #endif
         }
         #endif
     }
     
     struct _TapHoldToLockFocusGesture: Gesture {
-        var session: CameraSession
+        var session: Camera
         var state: _CameraFocusGestureState
         
         var isTouching: GestureState<Bool>
@@ -166,7 +173,7 @@ extension CameraViewFinder {
     
     @available(macOS, unavailable)
     struct _TapToFocusGesture: Gesture {
-        var session: CameraSession
+        var session: Camera
         var state: _CameraFocusGestureState
         
         var body: some Gesture {

@@ -8,9 +8,25 @@
 import SwiftUI
 import AVFoundation
 
-@MainActor struct CameraPreview {
-    var session: AVCaptureSession
+struct CameraPreview {
     let preview = _PlatformViewBackedPreview()
+    
+    @MainActor
+    var layer: AVCaptureVideoPreviewLayer {
+        preview.videoPreviewLayer
+    }
+    
+    nonisolated func connect(to session: AVCaptureSession) {
+        Task { @MainActor in
+            preview.session = session
+        }
+    }
+    
+    nonisolated func setVideoGravity(_ gravity: AVLayerVideoGravity) {
+        Task { @MainActor in
+            preview.videoPreviewLayer.videoGravity = gravity
+        }
+    }
 }
 
 #if os(macOS)
@@ -20,10 +36,7 @@ extension CameraPreview: NSViewRepresentable {
     }
     
     func updateNSView(_ view: _PlatformViewBackedPreview, context: Context) {
-        DispatchQueue.main.async {
-            view.videoPreviewLayer.videoGravity = .resizeAspectFill
-            view.session = session
-        }
+        
     }
 }
 #else
@@ -33,10 +46,7 @@ extension CameraPreview: UIViewRepresentable {
     }
     
     func updateUIView(_ view: _PlatformViewBackedPreview, context: Context) {
-        DispatchQueue.main.async {
-            view.videoPreviewLayer.videoGravity = .resizeAspectFill
-            view.session = session
-        }
+
     }
 }
 #endif
@@ -45,13 +55,10 @@ extension CameraPreview: UIViewRepresentable {
 
 extension CameraPreview {
     class _PlatformViewBackedPreview: PlatformView {
-        package var videoPreviewLayer: AVCaptureVideoPreviewLayer {
-            guard let layer = layer as? AVCaptureVideoPreviewLayer else {
-                fatalError("Expected `AVCaptureVideoPreviewLayer` type for layer. Check PreviewView.layerClass implementation.")
-            }
-            return layer
+        @MainActor var videoPreviewLayer: AVCaptureVideoPreviewLayer {
+            layer as! AVCaptureVideoPreviewLayer
         }
-        
+
         var session: AVCaptureSession? {
             get { videoPreviewLayer.session }
             set { videoPreviewLayer.session = newValue }

@@ -89,7 +89,7 @@ public final class CameraManager: NSObject, @unchecked Sendable {
         get async { await AVCaptureDevice.requestAccess(for: .video) }
     }
     
-    /// Configure session and start running the capture pipeline.
+    /// Configure session and start running the capture coordinator.
     public func startSession() {
         guard session.isRunning == false else { return }
         sessionQueue.async { [weak self] in

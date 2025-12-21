@@ -9,17 +9,17 @@ import AVFoundation
 import Foundation
 
 final class PhotoReadinessCoordinatorDelegate: NSObject, AVCapturePhotoOutputReadinessCoordinatorDelegate {
-    unowned var session: PhotoCaptureSession
+    unowned var camera: Camera
     
-    init(session: PhotoCaptureSession) {
-        self.session = session
+    init(camera: Camera) {
+        self.camera = camera
     }
     
     func readinessCoordinator(
         _ coordinator: AVCapturePhotoOutputReadinessCoordinator,
         captureReadinessDidChange captureReadiness: AVCapturePhotoOutput.CaptureReadiness
     ) {
-        session.shutterDisabled = captureReadiness != .ready
-        session.isBusyProcessing = captureReadiness == .notReadyWaitingForProcessing
+        camera.shutterDisabled = captureReadiness != .ready
+        camera.isBusyProcessing = captureReadiness == .notReadyWaitingForProcessing
     }
 }

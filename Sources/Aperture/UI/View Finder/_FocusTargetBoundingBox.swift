@@ -10,7 +10,7 @@ import AVFoundation
 
 @available(macOS, unavailable)
 struct _FocusTargetBoundingBox: View {
-    var session: CameraSession
+    var camera: Camera
     
     enum FocusMode: Sendable, Equatable {
         case autoFocus
@@ -178,7 +178,7 @@ struct _FocusTargetBoundingBox: View {
                 idleTimer?.cancel()
                 currentPhase = .normal
                 do {
-                    guard let device = session.camera.device else { return }
+                    guard let device = camera.device.device else { return }
                     if !isUnlocked {
                         try device.lockForConfiguration()
                         self.isUnlocked = true
@@ -188,12 +188,12 @@ struct _FocusTargetBoundingBox: View {
                     device.exposureMode = .autoExpose
                     device.setExposureTargetBias(Float(ev))
                 } catch {
-                    session.logger.error("Cannot lock device for configuration: \(error.localizedDescription)")
+                    camera.coordinator.logger.error("Cannot lock device for configuration: \(error.localizedDescription)")
                 }
             }
             .onEnded { _ in
                 updateFocusIndicator()
-                session.camera.device?.unlockForConfiguration()
+                camera.device.device?.unlockForConfiguration()
                 self.isUnlocked = false
                 self.lastExposureY = self.exposureY
             }
@@ -202,7 +202,7 @@ struct _FocusTargetBoundingBox: View {
     @Sendable private func trackFocusState() async {
         defer { updateFocusIndicator() }
         
-        guard let device = session.camera.device else { return }
+        guard let device = camera.device.device else { return }
         
         var lensPosition = device.lensPosition
         let timeout = 1000 // Timeout for stopping finding a focus if we cannot
@@ -273,7 +273,7 @@ extension _FocusTargetBoundingBox {
 
 #if os(iOS)
 #Preview {
-    _FocusTargetBoundingBox(session: PhotoCaptureSession(camera: .standard), focusMode: .manualFocusLocking)
+    _FocusTargetBoundingBox(camera: Camera(device: .standard, configuration: .photo), focusMode: .manualFocusLocking)
         .frame(width: 100, height: 100)
         .preferredColorScheme(.dark)
         .coordinateSpace(.named("PREVIEW"))
