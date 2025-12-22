@@ -202,6 +202,7 @@ final class CameraCoordinator: NSObject, Logging {
         ) { [weak self] angle in
             Task { @MainActor in
                 self?.camera?.previewRotationAngle = angle
+                self?.cameraPreview.preview.videoPreviewLayer.connection?.videoRotationAngle = angle
             }
         }
     }
