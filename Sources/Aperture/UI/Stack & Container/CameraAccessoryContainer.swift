@@ -34,28 +34,47 @@ public struct CameraAccessoryContainer<LeadingAccessories: View, Content: View, 
     }
     
     @Namespace private var accessoryContainer
+    @State private var mainContentRect: CGRect?
 
     public var body: some View {
-        let mainContent = self.mainContent
-        
-        mainContent
-            .matchedGeometryEffect(id: "main-content", in: accessoryContainer)
+        self.mainContent
+            .onGeometryChange(for: CGRect.self) { proxy in
+                proxy.frame(in: .named(accessoryContainer))
+            } action: { rect in
+                mainContentRect = rect
+            }
             .frame(
                 maxWidth: proxy.secondaryLayoutStack.stack == .hstack ? .infinity : nil,
                 maxHeight: proxy.secondaryLayoutStack.stack == .vstack ? .infinity : nil
             )
+            .coordinateSpace(name: accessoryContainer)
             .overlay(alignment: alignment) {
                 _VariadicView.Tree(
                     _CameraStack(
-                        spacing: spacing,
+                        spacing: 0,
                         configuration: proxy.secondaryLayoutStack
                     )
                 ) {
+                    let topLeftSizeArea = (
+                        width: proxy.secondaryLayoutStack.stack == .hstack ? mainContentRect?.minX : mainContentRect?.width,
+                        height: proxy.secondaryLayoutStack.stack == .hstack ? mainContentRect?.height : mainContentRect?.minY
+                    )
                     leadingAccessories
-                    mainContent
-                        .hidden()
-                        .matchedGeometryEffect(id: "main-content", in: accessoryContainer, isSource: false)
+                        .ensureLayout(alignment: .leading)
+                        .frame(
+                            minWidth: proxy.secondaryLayoutStack.order == .normal ? topLeftSizeArea.width : nil,
+                            minHeight: proxy.secondaryLayoutStack.order == .normal ? topLeftSizeArea.height : nil
+                        )
+                    EmptyView()
+                        .ensureLayout()
+                        .frame(width: mainContentRect?.width, height: mainContentRect?.height)
+                        .padding(spacing ?? .zero)
                     trailingAccessories
+                        .ensureLayout(alignment: .trailing)
+                        .frame(
+                            minWidth: proxy.secondaryLayoutStack.order == .reversed ? topLeftSizeArea.width : nil,
+                            minHeight: proxy.secondaryLayoutStack.order == .reversed ? topLeftSizeArea.height : nil
+                        )
                 }
             }
     }
