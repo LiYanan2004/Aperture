@@ -21,7 +21,7 @@ public final class Camera {
     public var device: any CameraDevice {
         willSet {
             Task { @CameraActor in
-                coordinator.cameraInputDevice = newValue.device
+                coordinator.cameraInputDevice = newValue.captureDevice
             }
         }
     }
@@ -37,7 +37,7 @@ public final class Camera {
         self.coordinator = coordinator
         
         Task { @CameraActor in
-            coordinator.cameraInputDevice = device.device
+            coordinator.cameraInputDevice = device.captureDevice
         }
         
         Task { @MainActor in
@@ -47,13 +47,18 @@ public final class Camera {
     
     // MARK: - Session Management
 
-    /// A obvserable boolean value indicates whether the session is currently running.
-    var isRunning: Bool = false
+    /// A obvserable value indicates the current state of the session.
+    public var captureSessionState: CaptureSessionState = .idle
+    public enum CaptureSessionState {
+        case idle
+        case running
+        case configuring
+    }
     
     /// Starts the session.
     public func startRunning() async throws {
         guard await Camera.isAccessible else { throw CameraError.permissionDenied }
-        guard isRunning == false else { throw CameraError.sessionAlreadStarted }
+        guard captureSessionState != .running else { throw CameraError.sessionAlreadStarted }
         
         Task { @CameraActor in
             try await coordinator.configureSession()
@@ -61,7 +66,9 @@ public final class Camera {
                 coordinator.captureSession.startRunning()
             }
             
-            self.isRunning = coordinator.captureSession.isRunning
+            if coordinator.captureSession.isRunning {
+                self.captureSessionState = .running
+            }
         }
     }
     
@@ -69,7 +76,9 @@ public final class Camera {
     public func stopRunning() {
         Task { @CameraActor in
             coordinator.captureSession.stopRunning()
-            self.isRunning = coordinator.captureSession.isRunning
+            if coordinator.captureSession.isRunning == false {
+                self.captureSessionState = .idle
+            }
         }
     }
     
@@ -99,24 +108,24 @@ public final class Camera {
     /// - SeeAlso: ``setPhotoCaptureOptions(_:)``
     internal(set) public var photoCaptureOptions: RequestedPhotoCaptureOptions = []
     
-    #if os(iOS)
-    /// A value that controls the cropping and enlargement of images captured by the device.
-    public var zoomFactor: CGFloat = 1.0 {
-        willSet {
-            Task { @CameraActor in
-                coordinator.withCurrentCaptureDevice { device in
-                    guard newValue != zoomFactor else { return }
-                    device.videoZoomFactor = zoomFactor
-                }
-            }
-        }
-    }
-    #endif
-    
+    /// An observable value indicates current flash mode for capturing.
+    public var flashMode: AVCaptureDevice.FlashMode = .off
     /// An observable boolean value indicates whether the focus is locked by user (via long press).
     ///
     /// - SeeAlso: ``CameraViewFinder``
     internal(set) public var focusLocked = false
+    #if os(iOS)
+    /// A value that controls the cropping and enlargement of images captured by the device.
+    public var zoomFactor: CGFloat = 1.0 {
+        willSet {
+            guard newValue != self.zoomFactor else { return }
+            
+            coordinator.withCurrentCaptureDevice { device in
+                device.videoZoomFactor = newValue
+            }
+        }
+    }
+    #endif
 }
 
 // MARK: - Camera Actions
@@ -148,7 +157,7 @@ extension Camera {
             guard coordinator.photoOutput.captureOptions != options else { return }
             coordinator.photoOutput.captureOptions = options
             
-            if isRunning {
+            if captureSessionState != .idle {
                 try await coordinator.configureSession()
             }
         }

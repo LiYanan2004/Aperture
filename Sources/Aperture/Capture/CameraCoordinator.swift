@@ -46,30 +46,37 @@ final class CameraCoordinator: NSObject, Logging {
     
     /// Configure current session and corresponding capture pipeline with current configuration and devices.
     internal func configureSession() async throws {
+        await MainActor.run {
+            self.camera?.captureSessionState = .configuring
+        }
         captureSession.beginConfiguration()
         defer {
             captureSession.commitConfiguration()
+            
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(0.1))
+                self.camera?.captureSessionState = await captureSession.isRunning ? .running : .idle
+            }
         }
         
+        // MARK: 1. Session
         if captureSession.canSetSessionPreset(configuration.sessionPreset) {
             captureSession.sessionPreset = configuration.sessionPreset
         }
         
-        // Removes existing input
+        // MARK: 2. Inputs
         if let cameraInput {
             captureSession.removeInput(cameraInput)
         }
         
-        // Adds new input
         guard let inputDevice = cameraInputDevice else { throw CameraError.invalidCaptureDevice }
         self.cameraInput = try addInput(from: inputDevice)
         
-        // Remove existing output to re-configure.
+        // MARK: 3. Outputs
         self.outputs.forEach {
             captureSession.removeOutput($0.output)
         }
         
-        // Add new outputs
         let camera = await camera
         let outputs: [any CaptureOutput] = if configuration.sessionPreset == .photo {
             [photoOutput]
@@ -84,10 +91,11 @@ final class CameraCoordinator: NSObject, Logging {
             }
         }
         
-        // Connect to the preview
+        // MARK: 4. Preview
         cameraPreview.connect(to: captureSession)
+        cameraPreview.adjustPreview(for: inputDevice)
         
-        // Setup rotation coordinator for adaptive UI and capture content rotation.
+        // MARK: 5. Rotation Coordinator
         rotationCoordinator = await MainActor.run {
             AVCaptureDevice.RotationCoordinator(
                 device: inputDevice,
@@ -95,6 +103,35 @@ final class CameraCoordinator: NSObject, Logging {
             )
         }
         observeRotationCoordinator()
+    }
+    
+    @available(macOS, unavailable)
+    func setManualFocus(
+        pointOfInterst: CGPoint,
+        focusMode: AVCaptureDevice.FocusMode,
+        exposureMode: AVCaptureDevice.ExposureMode
+    ) {
+        withCurrentCaptureDevice { device in
+            guard device.isFocusPointOfInterestSupported,
+                  device.isExposurePointOfInterestSupported else {
+                self.logger.warning("Current device doesn't support focusing or exposing point of interst.")
+                return
+            }
+            device.focusPointOfInterest = pointOfInterst
+            if device.isFocusModeSupported(focusMode) {
+                device.focusMode = focusMode
+            }
+            
+            device.setExposureTargetBias(Float.zero)
+            device.exposurePointOfInterest = pointOfInterst
+            if device.isExposureModeSupported(exposureMode) {
+                device.exposureMode = exposureMode
+            }
+            
+            let locked = focusMode == .locked || exposureMode == .locked
+            // Enable `SubjectAreaChangeMonitoring` to reset focus at appropriate time
+            device.isSubjectAreaChangeMonitoringEnabled = !locked
+        }
     }
 
     // MARK: - Input
@@ -169,47 +206,19 @@ final class CameraCoordinator: NSObject, Logging {
         }
     }
     
-    #if os(iOS)
-    func setManualFocus(
-        pointOfInterst: CGPoint,
-        focusMode: AVCaptureDevice.FocusMode,
-        exposureMode: AVCaptureDevice.ExposureMode
+    nonisolated public func withCurrentCaptureDevice(
+        perform action: @escaping @CameraActor (AVCaptureDevice) throws -> Void
     ) {
-        withCurrentCaptureDevice { device in
-            guard device.isFocusPointOfInterestSupported,
-                  device.isExposurePointOfInterestSupported else {
-                logger.warning("Current device doesn't support focusing or exposing point of interst.")
-                return
+        Task {
+            guard let cameraInputDevice = await cameraInputDevice else { return }
+            do {
+                try cameraInputDevice.lockForConfiguration()
+                defer { cameraInputDevice.unlockForConfiguration() }
+                
+                try await action(cameraInputDevice)
+            } catch {
+                logger.error("Cannot lock device for configuration: \(error.localizedDescription)")
             }
-            device.focusPointOfInterest = pointOfInterst
-            if device.isFocusModeSupported(focusMode) {
-                device.focusMode = focusMode
-            }
-            
-            device.setExposureTargetBias(Float.zero)
-            device.exposurePointOfInterest = pointOfInterst
-            if device.isExposureModeSupported(exposureMode) {
-                device.exposureMode = exposureMode
-            }
-            
-            let locked = focusMode == .locked || exposureMode == .locked
-            // Enable `SubjectAreaChangeMonitoring` to reset focus at appropriate time
-            device.isSubjectAreaChangeMonitoringEnabled = !locked
-        }
-    }
-    #endif
-    
-    public func withCurrentCaptureDevice(
-        perform action: @CameraActor (AVCaptureDevice) throws -> Void
-    ) {
-        guard let cameraInputDevice else { return }
-        do {
-            try cameraInputDevice.lockForConfiguration()
-            defer { cameraInputDevice.unlockForConfiguration() }
-            
-            try action(cameraInputDevice)
-        } catch {
-            logger.error("Cannot lock device for configuration: \(error.localizedDescription)")
         }
     }
 }

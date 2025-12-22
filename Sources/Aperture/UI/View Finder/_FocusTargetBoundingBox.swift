@@ -178,7 +178,7 @@ struct _FocusTargetBoundingBox: View {
                 idleTimer?.cancel()
                 currentPhase = .normal
                 do {
-                    guard let device = camera.device.device else { return }
+                    guard let device = camera.device.captureDevice else { return }
                     if !isUnlocked {
                         try device.lockForConfiguration()
                         self.isUnlocked = true
@@ -193,7 +193,7 @@ struct _FocusTargetBoundingBox: View {
             }
             .onEnded { _ in
                 updateFocusIndicator()
-                camera.device.device?.unlockForConfiguration()
+                camera.device.captureDevice?.unlockForConfiguration()
                 self.isUnlocked = false
                 self.lastExposureY = self.exposureY
             }
@@ -202,7 +202,7 @@ struct _FocusTargetBoundingBox: View {
     @Sendable private func trackFocusState() async {
         defer { updateFocusIndicator() }
         
-        guard let device = camera.device.device else { return }
+        guard let device = camera.device.captureDevice else { return }
         
         var lensPosition = device.lensPosition
         let timeout = 1000 // Timeout for stopping finding a focus if we cannot
@@ -273,7 +273,7 @@ extension _FocusTargetBoundingBox {
 
 #if os(iOS)
 #Preview {
-    _FocusTargetBoundingBox(camera: Camera(device: .standard, configuration: .photo), focusMode: .manualFocusLocking)
+    _FocusTargetBoundingBox(camera: Camera(device: .builtInCamera(), configuration: .photo), focusMode: .manualFocusLocking)
         .frame(width: 100, height: 100)
         .preferredColorScheme(.dark)
         .coordinateSpace(.named("PREVIEW"))

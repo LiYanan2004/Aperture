@@ -61,7 +61,7 @@ extension CameraViewFinder {
                     
                     focusGestureState.manualFocusMode = .manualFocusLocked
                 }
-                .onChange(of: camera.isRunning) {
+                .onChange(of: camera.captureSessionState == .running) {
                     focusGestureState.manualFocusIndicatorPosition = nil
                 }
                 .onReceive(
@@ -94,22 +94,22 @@ extension CameraViewFinder {
 
 extension CameraViewFinder {
     @Observable
+    @MainActor
     final class _CameraFocusGestureState {
         #if os(iOS)
-        typealias Session = Camera
         
         var showsAutoFocusBoundingBox = false
         var manualFocusIndicatorPosition: CGPoint?
         var manualFocusMode = _FocusTargetBoundingBox.FocusMode.manualFocus
         
-        func setAutoFocus(at point: CGPoint, session: Session) {
-            let pointOfInterest = session.coordinator.cameraPreview
+        func focus(at point: CGPoint, camera: Camera) {
+            #if !targetEnvironment(simulator)
+            let pointOfInterest = camera.coordinator.cameraPreview
                 .preview
                 .videoPreviewLayer
                 .captureDevicePointConverted(fromLayerPoint: point)
-            #if !targetEnvironment(simulator)
             Task { @CameraActor in
-                session.coordinator.setManualFocus(
+                camera.coordinator.setManualFocus(
                     pointOfInterst: pointOfInterest,
                     focusMode: .autoFocus,
                     exposureMode: .autoExpose
@@ -118,14 +118,14 @@ extension CameraViewFinder {
             #endif
         }
         
-        func setLockedFocus(at point: CGPoint, session: Session) {
-            let pointOfInterest = session.coordinator.cameraPreview
+        func lockFocus(at point: CGPoint, camera: Camera) {
+            #if !targetEnvironment(simulator)
+            let pointOfInterest = camera.coordinator.cameraPreview
                 .preview
                 .videoPreviewLayer
                 .captureDevicePointConverted(fromLayerPoint: point)
-            #if !targetEnvironment(simulator)
             Task { @CameraActor in
-                session.coordinator.setManualFocus(
+                camera.coordinator.setManualFocus(
                     pointOfInterst: pointOfInterest,
                     focusMode: .locked,
                     exposureMode: .locked
@@ -133,6 +133,7 @@ extension CameraViewFinder {
             }
             #endif
         }
+        
         #endif
     }
     
@@ -154,7 +155,7 @@ extension CameraViewFinder {
                             guard self.isTouching.wrappedValue else { return }
                             state.manualFocusMode = .manualFocusLocking
                             state.manualFocusIndicatorPosition = point
-                            state.setAutoFocus(at: point, session: session)
+                            state.focus(at: point, camera: session)
                             
                             try await Task.sleep(for: .seconds(0.4))
                             guard self.isTouching.wrappedValue else {
@@ -162,7 +163,7 @@ extension CameraViewFinder {
                                 session.focusLocked = false
                                 return
                             }
-                            state.setLockedFocus(at: point, session: session)
+                            state.lockFocus(at: point, camera: session)
                             session.focusLocked = true
                         }
                     }
@@ -183,7 +184,7 @@ extension CameraViewFinder {
                     session.focusLocked = false
                     state.manualFocusMode = .manualFocus
                     state.manualFocusIndicatorPosition = $0.location
-                    state.setAutoFocus(at: $0.location, session: session)
+                    state.focus(at: $0.location, camera: session)
                 }
                 #endif
         }

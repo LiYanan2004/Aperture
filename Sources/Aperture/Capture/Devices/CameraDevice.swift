@@ -11,20 +11,19 @@ import Foundation
 @_typeEraser(AnyCameraDevice)
 @dynamicMemberLookup
 public protocol CameraDevice: Identifiable, Equatable {
-    var device: AVCaptureDevice? { get }
-    var position: CameraPosition { get }
+    var captureDevice: AVCaptureDevice? { get }
 }
 
 extension CameraDevice {
     public subscript<T>(dynamicMember keyPath: KeyPath<AVCaptureDevice?, T>) -> T {
-        device[keyPath: keyPath]
+        captureDevice[keyPath: keyPath]
     }
     
-    public var id: String? { device?.uniqueID }
+    public var id: String? { captureDevice?.uniqueID }
     
     public var isFusionCamera: Bool {
         #if os(iOS)
-        (device?.isVirtualDevice == true) && (device?.virtualDeviceSwitchOverVideoZoomFactors.isEmpty == false)
+        (captureDevice?.isVirtualDevice == true) && (captureDevice?.virtualDeviceSwitchOverVideoZoomFactors.isEmpty == false)
         #else
         false
         #endif
@@ -34,12 +33,10 @@ extension CameraDevice {
 // MARK: - AnyCameraDevice
 
 public struct AnyCameraDevice: CameraDevice {
-    public var device: AVCaptureDevice?
-    public var position: CameraPosition
+    public let captureDevice: AVCaptureDevice?
     
     public init<C: CameraDevice>(_ camera: C) {
-        self.device = camera.device
-        self.position = camera.position
+        self.captureDevice = camera.captureDevice
     }
     
     @inlinable

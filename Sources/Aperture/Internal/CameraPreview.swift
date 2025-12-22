@@ -22,6 +22,22 @@ struct CameraPreview {
         }
     }
     
+    nonisolated func adjustPreview(for device: AVCaptureDevice) {
+        Task { @MainActor in
+            if let connection = preview.videoPreviewLayer.connection,
+               connection.isVideoMirroringSupported {
+                // front camera will be mirrored by `CameraViewFinder._FlipViewModifier`
+                // The position of mac built-in camera / continuity camera is `.unspecified` and we need to mirror that.
+                let needsSetManually = device.position == .unspecified
+                connection.automaticallyAdjustsVideoMirroring = !needsSetManually
+                
+                if needsSetManually {
+                    connection.isVideoMirrored = true
+                }
+            }
+        }
+    }
+    
     nonisolated func setVideoGravity(_ gravity: AVLayerVideoGravity) {
         Task { @MainActor in
             preview.videoPreviewLayer.videoGravity = gravity

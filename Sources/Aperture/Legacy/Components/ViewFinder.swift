@@ -24,16 +24,15 @@ public struct ViewFinder: View {
                     transcation.disablesAnimations = true
                     transcation.animation = nil
                 }
-                .blur(radius: proxy._cameraManager.sessionState == .running ? 0 : 15, opaque: true)
+                .blur(radius: proxy._cameraManager.captureSessionState == .running ? 0 : 15, opaque: true)
                 .overlay { cornerBorders }
-                .sensoryFeedback(.selection, trigger: proxy.position)
                 #if targetEnvironment(simulator)
                 .overlay {
                     Rectangle().fill(.fill)
                 }
                 #endif
                 .rotation3DEffect(
-                    .degrees(proxy._cameraManager.sessionState == .running && proxy._cameraManager.isFrontCamera ? 180 : 0),
+                    .degrees(proxy._cameraManager.captureSessionState == .running && proxy._cameraManager.isFrontCamera ? 180 : 0),
                     axis: (x: 0.0, y: 1.0, z: 0.0),
                     perspective: 0
                 )

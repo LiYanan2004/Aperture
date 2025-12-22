@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct RequestedPhotoCaptureOptions: OptionSet, Sendable {
+public struct RequestedPhotoCaptureOptions: OptionSet, Hashable, Sendable {
     public let rawValue: UInt
     
     public init(rawValue: UInt) {
@@ -17,6 +17,11 @@ public struct RequestedPhotoCaptureOptions: OptionSet, Sendable {
     /// Capture photos with zero shutter lag if supported.
     static public let zeroShutterLag = RequestedPhotoCaptureOptions(rawValue: 1 << 0)
     /// Enable responsive capture to reduce capture latency.
+    ///
+    /// Responsive capture is not supported when using high-resolution photo modes (e.g. taking 48MP photo).
+    ///
+    /// - SeeAlso: ``PhotoCaptureConfiguration/Resolution/12mp``
+    /// - SeeAlso: ``PhotoCaptureConfiguration/Resolution/maximumSupported``
     static public let responsiveCapture = RequestedPhotoCaptureOptions(rawValue: 1 << 1)
     /// Prioritize faster capture performance over quality.
     static public let fastCapturePrioritization = RequestedPhotoCaptureOptions(rawValue: 1 << 2)

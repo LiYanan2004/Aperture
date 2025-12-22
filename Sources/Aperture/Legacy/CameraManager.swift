@@ -30,7 +30,7 @@ public final class CameraManager: NSObject, @unchecked Sendable {
         case running, notRunning, committing
     }
     /// Current state of the capture session.
-    public internal(set) var sessionState: SessionState = .notRunning
+    public internal(set) var captureSessionState: SessionState = .notRunning
     
     internal let session = AVCaptureSession()
     private var sessionQueue = DispatchQueue(label: "com.liyanan2004.Aperture.sessionQueue")
@@ -98,7 +98,7 @@ public final class CameraManager: NSObject, @unchecked Sendable {
             configureSession()
             session.startRunning()
             Task { @MainActor in
-                self.sessionState = self.session.isRunning ? .running : .notRunning
+                self.captureSessionState = self.session.isRunning ? .running : .notRunning
             }
         }
     }
@@ -111,7 +111,7 @@ public final class CameraManager: NSObject, @unchecked Sendable {
             
             session.stopRunning()
             Task { @MainActor in
-                self.sessionState = .notRunning
+                self.captureSessionState = .notRunning
             }
         }
     }
@@ -167,7 +167,7 @@ public final class CameraManager: NSObject, @unchecked Sendable {
     @available(tvOS, unavailable)
     private func disableUIInteractionAndToggleCamera() {
         shutterDisabled = true
-        sessionState = .committing
+        captureSessionState = .committing
         if cameraPosition == .back {
             backCameraDisplayZoomFactor = currentDeviceDefaultZoomFactor
         }
@@ -233,7 +233,7 @@ public final class CameraManager: NSObject, @unchecked Sendable {
                         // Resume preview connection in the middle of the dimming effect
                         try await Task.sleep(for: .seconds(0.15))
                         self.cameraPreview.preview.videoPreviewLayer.connection?.isEnabled = true
-                        self.sessionState = .running
+                        self.captureSessionState = .running
                         // Fade in the new preview with a spring animation
                         // to keep the animation velocity if necessary
                         withAnimation(.smooth(duration: 0.3)) {

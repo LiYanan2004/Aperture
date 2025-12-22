@@ -55,11 +55,25 @@ public final class PhotoCapture: PhotoCaptureOutput, Logging {
         guard let device else { throw CameraError.invalidCaptureDevice }
         
         let photoSettings = AVCapturePhotoSettings()
-        photoSettings.maxPhotoDimensions = self.output.maxPhotoDimensions
+        
+        let dimensions = if let minimumPixelCount = configuration.resolution._minimumPixelCount {
+            device.activeFormat
+                .supportedMaxPhotoDimensions
+                .first(where: {
+                    $0.width * $0.height > minimumPixelCount
+                })
+        } else {
+            device.activeFormat.supportedMaxPhotoDimensions.last
+        }
+        guard let dimensions else {
+            throw CameraError.unsatisfiablePhotoCaptureConfiguration(key: \.resolution)
+        }
+        
+        photoSettings.maxPhotoDimensions = dimensions
         photoSettings.photoQualityPrioritization = configuration.qualityPrioritization
         
-        if output.supportedFlashModes.contains(device.flashMode) {
-            photoSettings.flashMode = device.flashMode
+        if output.supportedFlashModes.contains(camera.flashMode) {
+            photoSettings.flashMode = camera.flashMode
         }
         
         @available(iOS 18.0, macOS 15.0, tvOS 18.0, macCatalyst 18.0, *)
@@ -69,7 +83,7 @@ public final class PhotoCapture: PhotoCaptureOutput, Logging {
                 logger.error("[Constant Color] Current device doesn't support constant color.")
                 return
             }
-            guard device.flashMode == .off else {
+            guard camera.flashMode != .off else {
                 logger.error("[Constant Color] Constant color is unavailable when flash mode is off.")
                 return
             }
@@ -156,15 +170,32 @@ extension PhotoCapture {
     @CameraActor
     private func _setupFusionCameraIfNecessary(_ camera: Camera) {
         #if os(iOS)
+        var switchOverZoomFactor: CGFloat = 1
+        defer {
+            Task { @MainActor in
+                camera.zoomFactor = switchOverZoomFactor
+            }
+        }
+        
         guard camera.device.isFusionCamera else { return }
+        guard let captureDevice = camera.device.captureDevice else { return }
         
-        let wideAngleCameraZoomFactor = camera.device.device?
-            .virtualDeviceSwitchOverVideoZoomFactors
-            .first
-        guard let wideAngleCameraZoomFactor else { return }
+        let wideAngleCameraOffset = captureDevice.constituentDevices
+            .enumerated()
+            .first(where: { $0.element.deviceType == .builtInWideAngleCamera })?
+            .offset
+        guard let wideAngleCameraOffset else { return }
         
+        // "These factors progress in the same order as the devices listed in that property." -- documentation
+        // Since switchOverVideoZoomFactor count is N - 1 (where N == constituentDevices.count), shift left by one to remove 1.0x
+        let switchOverZoomFactorOffset = wideAngleCameraOffset -  /* 1.0x */ 1
+        guard switchOverZoomFactorOffset >= 0 else { return }
+        
+        switchOverZoomFactor = CGFloat(
+            truncating: captureDevice.virtualDeviceSwitchOverVideoZoomFactors[switchOverZoomFactorOffset]
+        )
         camera.coordinator.withCurrentCaptureDevice { device in
-            device.videoZoomFactor = CGFloat(truncating: wideAngleCameraZoomFactor)
+            device.videoZoomFactor = switchOverZoomFactor
         }
         #endif
     }

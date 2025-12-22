@@ -17,6 +17,8 @@ public struct CameraShutterButton: View {
     var action: (CapturedPhoto) -> Void
     
     @State private var counter = 0
+    @State private var error: CaptureError?
+    @State private var presentsErrorAlert = false
     
     /// Create a shutter button for photo capturing.
     /// - parameter action: The action to perform when captured photo arrives.
@@ -47,14 +49,20 @@ public struct CameraShutterButton: View {
                     .strokeBorder(.primary, lineWidth: 4)
             }
             .disabled(camera.shutterDisabled)
+            .disabled(camera.captureSessionState != .running)
             .frame(maxWidth: 72)
     }
     
     private var captureButton: some View {
         Button {
             Task {
-                let capturedPhoto = try await camera.takePhoto(configuration: configuration)
-                action(capturedPhoto)
+                do {
+                    let capturedPhoto = try await camera.takePhoto(configuration: configuration)
+                    action(capturedPhoto)
+                } catch {
+                    self.error = CaptureError(_error: error)
+                    self.presentsErrorAlert = true
+                }
             }
         } label: {
             Circle()
@@ -71,11 +79,20 @@ public struct CameraShutterButton: View {
                 }
                 .animation(.smooth(duration: 0.15), value: camera.isBusyProcessing)
         }
+        .alert(isPresented: $presentsErrorAlert, error: error) { }
+    }
+    
+    struct CaptureError: LocalizedError {
+        var _error: any Error
+        
+        var errorDescription: String? {
+            _error.localizedDescription
+        }
     }
 }
 
 #Preview {
-    CameraShutterButton(camera: Camera(device: .standard, configuration: .photo)) { photo in
+    CameraShutterButton(camera: Camera(device: .builtInCamera(), configuration: .photo)) { photo in
         // Process captured photo here.
     }
 }

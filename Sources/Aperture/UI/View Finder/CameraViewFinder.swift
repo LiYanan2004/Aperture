@@ -49,13 +49,21 @@ public struct CameraViewFinder: View {
     }
     
     @State private var cameraError: CameraError?
+    @State private var position: CameraPosition?
     
     public var body: some View {
         Rectangle()
             .fill(.clear)
             .overlay { camera.coordinator.cameraPreview }
             .overlay { dimmingLayer }
-            .overlay { errorOverlay }
+            .animation(.smooth) { content in
+                content.blur(radius: camera.captureSessionState == .running ? 0 : 20, opaque: true)
+            }
+            .modifier(_FlipViewModifier(trigger: position ?? .platformDefault))
+            .onChange(of: camera.device.id, initial: true) {
+                guard let builtInCamera = camera.device as? BuiltInCamera else { return }
+                position = builtInCamera.position
+            }
             .onChange(of: videoGravity, initial: true) {
                 camera.coordinator.cameraPreview.setVideoGravity(videoGravity.avLayerVideoGravity)
             }
@@ -70,6 +78,7 @@ public struct CameraViewFinder: View {
                 isEnabled: gestures.contains(.zoom)
             )
             .clipped()
+            .disabled(camera.captureSessionState != .running)
     }
 
     private var dimmingLayer: some View {

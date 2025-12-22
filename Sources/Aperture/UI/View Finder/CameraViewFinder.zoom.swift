@@ -19,14 +19,14 @@ extension CameraViewFinder {
         
         private var minZoomFactor: CGFloat {
             #if os(iOS)
-            device?.device?.minAvailableVideoZoomFactor ?? 1
+            device?.captureDevice?.minAvailableVideoZoomFactor ?? 1
             #else
             1
             #endif
         }
         private var maxZoomFactor: CGFloat {
             #if os(iOS)
-            5.0 * CGFloat(truncating: device?.device?.virtualDeviceSwitchOverVideoZoomFactors.last ?? 1)
+            5.0 * CGFloat(truncating: device?.captureDevice?.virtualDeviceSwitchOverVideoZoomFactors.last ?? 1)
             #else
             1
             #endif
@@ -36,11 +36,11 @@ extension CameraViewFinder {
             MagnifyGesture()
                 #if os(iOS)
                 .onChanged { value in
-                    guard let device, let deviceDevice = device.device else { return }
+                    guard let captureDevice = device?.captureDevice else { return }
                     
                     if initialFactor == nil {
                         do {
-                            try deviceDevice.lockForConfiguration()
+                            try captureDevice.lockForConfiguration()
                             self.initialFactor = camera.zoomFactor
                         } catch {
                             camera.coordinator.logger.error("Zoom gesture failed: \(error.localizedDescription)")
@@ -48,17 +48,16 @@ extension CameraViewFinder {
                     }
                     guard let initialFactor else { return }
                     
-                    switch device.position {
-                        case .front:
-                            // Toggle between 12MP and 8MP for front device
-                            camera.zoomFactor = value.magnification > 1 ? 1.3 : 1
-                        case .back:
-                            let zoomFactor = min(max(minZoomFactor, initialFactor * (value.magnification)), maxZoomFactor)
-                            camera.zoomFactor = zoomFactor
+                    if captureDevice.position == .front {
+                        // Toggle between 12MP and 8MP for front device
+                        camera.zoomFactor = value.magnification > 1 ? 1.3 : 1
+                    } else {
+                        let zoomFactor = min(max(minZoomFactor, initialFactor * (value.magnification)), maxZoomFactor)
+                        camera.zoomFactor = zoomFactor
                     }
                 }
                 .onEnded { _ in
-                    device?.device?.unlockForConfiguration()
+                    device?.captureDevice?.unlockForConfiguration()
                     initialFactor = nil
                 }
                 #endif

@@ -10,6 +10,7 @@ import Foundation
 public enum CameraError: LocalizedError {
     case invalidCaptureDevice
     case permissionDenied
+    case unsatisfiablePhotoCaptureConfiguration(key: PartialKeyPath<PhotoCaptureConfiguration>)
     case sessionAlreadStarted
     
     public var errorDescription: String? {
@@ -20,6 +21,8 @@ public enum CameraError: LocalizedError {
                 "User denied the camera access."
             case .sessionAlreadStarted:
                 "AVCaptureSession is currently running, no need to run it again."
+            case .unsatisfiablePhotoCaptureConfiguration(let key):
+                "No available option satisfies the photo capture configuration for key: \(key)."
         }
     }
 }
