@@ -13,14 +13,17 @@ import Combine
 
 /// An observable camera instance camera feed, photo capturing, and more.
 @Observable
-public final class Camera {
+public final class Camera: SendableMetatype {
     /// A camera coordinator that consists of camera IO, session, rotation coordinator, etc.
     let coordinator: CameraCoordinator
 
     /// Currently active capture device.
+    private var _cameraSwitchingTask: Task<Void, Error>?
     public var device: any CameraDevice {
         willSet {
-            Task { @CameraActor in
+            _cameraSwitchingTask?.cancel()
+            _cameraSwitchingTask = Task { @CameraActor in
+                try await Task.sleep(for: .seconds(0.1))
                 coordinator.cameraInputDevice = newValue.captureDevice
             }
         }
@@ -67,7 +70,9 @@ public final class Camera {
             }
             
             if coordinator.captureSession.isRunning {
-                self.captureSessionState = .running
+                Task { @MainActor in
+                    self.captureSessionState = .running
+                }
             }
         }
     }

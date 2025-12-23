@@ -8,6 +8,7 @@
 import AVFoundation
 import Foundation
 import Combine
+import SwiftUI
 
 /// A camera coordinator responsible for managing shared camera infrastructure, including capture session, device input, capture output and more.
 @CameraActor
@@ -46,16 +47,29 @@ final class CameraCoordinator: NSObject, Logging {
     
     /// Configure current session and corresponding capture pipeline with current configuration and devices.
     internal func configureSession() async throws {
+        let camera = await camera
         await MainActor.run {
             self.camera?.captureSessionState = .configuring
         }
+        
         captureSession.beginConfiguration()
         defer {
-            captureSession.commitConfiguration()
+            let sessionIsRunning = self.captureSession.isRunning
             
-            Task { @MainActor in
-                try? await Task.sleep(for: .seconds(0.1))
-                self.camera?.captureSessionState = await captureSession.isRunning ? .running : .idle
+            self.captureSession.commitConfiguration()
+            
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                
+                withAnimation(sessionIsRunning ? .easeInOut(duration: 0.15) : nil) {
+                    self.camera?.previewDimming = true
+                } completion: {
+                    self.cameraPreview.setPreviewConnectionEnabled(true)
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        self.camera?.previewDimming = false
+                        self.camera?.captureSessionState = sessionIsRunning ? .running : .idle
+                    }
+                }
             }
         }
         
@@ -65,8 +79,8 @@ final class CameraCoordinator: NSObject, Logging {
         }
         
         // MARK: 2. Inputs
-        if let cameraInput {
-            captureSession.removeInput(cameraInput)
+        captureSession.inputs.forEach { input in
+            captureSession.removeInput(input)
         }
         
         guard let inputDevice = cameraInputDevice else { throw CameraError.invalidCaptureDevice }
@@ -77,7 +91,6 @@ final class CameraCoordinator: NSObject, Logging {
             captureSession.removeOutput($0.output)
         }
         
-        let camera = await camera
         let outputs: [any CaptureOutput] = if configuration.sessionPreset == .photo {
             [photoOutput]
         } else {
@@ -90,10 +103,12 @@ final class CameraCoordinator: NSObject, Logging {
                 try output.updateOutput(camera)
             }
         }
+        self.outputs = outputs
         
         // MARK: 4. Preview
         cameraPreview.connect(to: captureSession)
         cameraPreview.adjustPreview(for: inputDevice)
+        cameraPreview.setPreviewConnectionEnabled(false)
         
         // MARK: 5. Rotation Coordinator
         rotationCoordinator = await MainActor.run {

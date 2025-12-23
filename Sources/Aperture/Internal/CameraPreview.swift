@@ -18,6 +18,7 @@ struct CameraPreview {
     
     nonisolated func connect(to session: AVCaptureSession) {
         Task { @MainActor in
+            guard preview.session != session else { return }
             preview.session = session
         }
     }
@@ -40,7 +41,13 @@ struct CameraPreview {
     
     nonisolated func setVideoGravity(_ gravity: AVLayerVideoGravity) {
         Task { @MainActor in
-            preview.videoPreviewLayer.videoGravity = gravity
+            layer.videoGravity = gravity
+        }
+    }
+    
+    nonisolated func setPreviewConnectionEnabled(_ isEnabled: Bool) {
+        Task { @MainActor in
+            layer.connection?.isEnabled = isEnabled
         }
     }
 }

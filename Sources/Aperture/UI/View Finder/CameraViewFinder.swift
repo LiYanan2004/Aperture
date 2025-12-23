@@ -53,12 +53,12 @@ public struct CameraViewFinder: View {
     
     public var body: some View {
         Rectangle()
-            .fill(.clear)
-            .overlay { camera.coordinator.cameraPreview }
-            .overlay { dimmingLayer }
-            .animation(.smooth) { content in
-                content.blur(radius: camera.captureSessionState == .running ? 0 : 20, opaque: true)
+            .fill(.black)
+            .overlay {
+                camera.coordinator.cameraPreview
+                    .opacity(camera.previewDimming ? 0 : 1)
             }
+            .blur(radius: camera.captureSessionState == .running ? 0 : 15, opaque: true)
             .modifier(_FlipViewModifier(trigger: position ?? .platformDefault))
             .onChange(of: camera.device.id, initial: true) {
                 guard let builtInCamera = camera.device as? BuiltInCamera else { return }
@@ -82,7 +82,7 @@ public struct CameraViewFinder: View {
     }
 
     private var dimmingLayer: some View {
-        Color.black.opacity(camera.previewDimming ? 1 : 0)
+        Color.black
     }
     
     @ViewBuilder
