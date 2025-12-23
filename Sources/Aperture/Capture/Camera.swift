@@ -23,7 +23,7 @@ public final class Camera: SendableMetatype {
         willSet {
             _cameraSwitchingTask?.cancel()
             _cameraSwitchingTask = Task { @CameraActor in
-                try await Task.sleep(for: .seconds(0.1))
+                try await Task.sleep(for: .seconds(0.2))
                 coordinator.cameraInputDevice = newValue.captureDevice
             }
         }
@@ -62,7 +62,7 @@ public final class Camera: SendableMetatype {
     public func startRunning() async throws {
         guard await Camera.isAccessible else { throw CameraError.permissionDenied }
         guard captureSessionState != .running else { throw CameraError.sessionAlreadStarted }
-        
+
         Task { @CameraActor in
             try await coordinator.configureSession()
             if !coordinator.captureSession.isRunning {
