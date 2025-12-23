@@ -130,6 +130,16 @@ public final class Camera: SendableMetatype {
             }
         }
     }
+    /// The zoom factor of the base camera (typically the wide-angle / “1x” camera).
+    ///
+    /// - SeeAlso: ``displayZoomFactor``
+    internal(set) public var baseZoomFactor: CGFloat = 1.0
+    /// A zoom factor normalized for on-screen presentation.
+    ///
+    /// This value represents the effective zoom relative to the base (wide-angle) camera, making it suitable for display in the user interface.
+    public var displayZoomFactor: CGFloat {
+        zoomFactor / baseZoomFactor
+    }
     #endif
 }
 

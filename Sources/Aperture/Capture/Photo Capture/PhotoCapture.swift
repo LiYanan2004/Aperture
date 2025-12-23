@@ -174,6 +174,7 @@ extension PhotoCapture {
         defer {
             Task { @MainActor in
                 camera.zoomFactor = switchOverZoomFactor
+                camera.baseZoomFactor = switchOverZoomFactor
             }
         }
         
@@ -188,7 +189,7 @@ extension PhotoCapture {
         
         // "These factors progress in the same order as the devices listed in that property." -- documentation
         // Since switchOverVideoZoomFactor count is N - 1 (where N == constituentDevices.count), shift left by one to remove 1.0x
-        let switchOverZoomFactorOffset = wideAngleCameraOffset -  /* 1.0x */ 1
+        let switchOverZoomFactorOffset = wideAngleCameraOffset - /* 1.0x */ 1
         guard switchOverZoomFactorOffset >= 0 else { return }
         
         switchOverZoomFactor = CGFloat(
