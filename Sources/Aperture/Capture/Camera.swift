@@ -102,6 +102,8 @@ public final class Camera: SendableMetatype {
     internal(set) public var isBusyProcessing = false
     /// An observable boolean value indicates whether the shutter is disabled for some reason.
     internal(set) public var shutterDisabled = false
+    /// An observable integer value indicates how many live photo capturing is in progress.
+    internal(set) public var inProgressLivePhoto = 0
     
     /// Requested photo capture options.
     ///

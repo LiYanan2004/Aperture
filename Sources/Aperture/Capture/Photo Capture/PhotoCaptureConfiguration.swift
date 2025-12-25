@@ -8,7 +8,7 @@
 import AVFoundation
 
 public struct PhotoCaptureConfiguration: Hashable, Sendable {
-    public var isLivePhoto: Bool
+    public var capturesLivePhoto: Bool
     public var resolution: Resolution
     public var qualityPrioritization: AVCapturePhotoOutput.QualityPrioritization
     
@@ -17,7 +17,7 @@ public struct PhotoCaptureConfiguration: Hashable, Sendable {
         resolution: Resolution = .maximumSupported,
         qualityPrioritization: AVCapturePhotoOutput.QualityPrioritization = .balanced
     ) {
-        self.isLivePhoto = isLivePhoto
+        self.capturesLivePhoto = isLivePhoto
         self.resolution = resolution
         self.qualityPrioritization = qualityPrioritization
     }

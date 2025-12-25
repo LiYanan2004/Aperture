@@ -12,45 +12,65 @@ import SwiftUI
 @available(visionOS, unavailable)
 @available(watchOS, unavailable)
 final class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate, Logging {
-    private var continuation: CheckedContinuation<CapturedPhoto, Never>
+    private var continuation: CheckedContinuation<CapturedPhoto, Error>
     private unowned var camera: Camera
+    
+    private var photoData: Data?
+    private var isProxy: Bool = false
+    private var livePhotoMovieURL: URL?
     
     init(
         camera: Camera,
-        continuation: CheckedContinuation<CapturedPhoto, Never>
+        continuation: CheckedContinuation<CapturedPhoto, Error>
     ) {
         self.camera = camera
         self.continuation = continuation
-    }
-    
-    private var capturedPhoto: CapturedPhoto? {
-        willSet {
-            guard let newValue else { return }
-            continuation.resume(returning: newValue)
-        }
     }
 
     func photoOutput(
         _ output: AVCapturePhotoOutput,
         willCapturePhotoFor resolvedSettings: AVCaptureResolvedPhotoSettings
     ) {
+        if !resolvedSettings.livePhotoMovieDimensions.isZero {
+            camera.inProgressLivePhoto += 1
+        }
+        
         // Fully dim the preview and show it back.
         camera.previewDimming = true
         withAnimation(.smooth(duration: 0.25)) {
             camera.previewDimming = false
         }
     }
-
-    #if !os(visionOS)
+    
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
         if let error {
             logger.error("There is an error when finishing processing photo: \(error.localizedDescription)")
-            return
         }
         
-        capturedPhoto = .photo(photo)
+        photoData = photo.fileDataRepresentation()
     }
-    #endif
+    
+    func photoOutput(
+        _ output: AVCapturePhotoOutput,
+        didFinishRecordingLivePhotoMovieForEventualFileAt outputFileURL: URL,
+        resolvedSettings: AVCaptureResolvedPhotoSettings
+    ) {
+        camera.inProgressLivePhoto -= 1
+    }
+    
+    func photoOutput(
+        _ output: AVCapturePhotoOutput,
+        didFinishProcessingLivePhotoToMovieFileAt outputFileURL: URL,
+        duration: CMTime,
+        photoDisplayTime: CMTime,
+        resolvedSettings: AVCaptureResolvedPhotoSettings,
+        error: (any Error)?
+    ) {
+        if let error {
+            logger.debug("Error processing Live Photo companion movie: \(String(describing: error))")
+        }
+        livePhotoMovieURL = outputFileURL
+    }
     
     #if os(iOS) && !targetEnvironment(macCatalyst)
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishCapturingDeferredPhotoProxy deferredPhotoProxy: AVCaptureDeferredPhotoProxy?, error: Error?) {
@@ -59,9 +79,43 @@ final class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate, Loggi
             return
         }
         
-        if let deferredPhotoProxy {
-            capturedPhoto = .photo(deferredPhotoProxy)
-        }
+        photoData = deferredPhotoProxy?.fileDataRepresentation()
+        isProxy = true
     }
     #endif
+
+    func photoOutput(
+        _ output: AVCapturePhotoOutput,
+        didFinishCaptureFor resolvedSettings: AVCaptureResolvedPhotoSettings,
+        error: (any Error)?
+    ) {
+        if let error {
+            logger.error("There is an error when finishing processing photo: \(error.localizedDescription)")
+        }
+        
+        guard let photoData else {
+            continuation.resume(throwing: PhotoCaptureError.noPhotoData)
+            return
+        }
+        
+        continuation.resume(
+            returning: CapturedPhoto(
+                data: photoData,
+                isProxy: isProxy,
+                livePhotoMovieURL: livePhotoMovieURL
+            )
+        )
+    }
+}
+
+enum PhotoCaptureError: Error {
+    case noPhotoData
+}
+
+// MARK: - Auxiliary
+
+fileprivate extension CMVideoDimensions {
+    var isZero: Bool {
+        width == 0 && height == 0
+    }
 }

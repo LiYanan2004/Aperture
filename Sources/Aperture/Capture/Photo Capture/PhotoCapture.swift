@@ -27,11 +27,11 @@ public final class PhotoCapture: PhotoCaptureOutput, Logging {
     ) async throws -> CapturedPhoto {
         let photoSettings = try await photoSettings(camera: camera, configuration: configuration)
         
-        let capturedPhoto = await withPhotoOutputReadinessCoordinatorTracking(
+        let capturedPhoto = try await withPhotoOutputReadinessCoordinatorTracking(
             camera: camera,
             photoSettings: photoSettings
         ) {
-            await withCheckedContinuation { continuation in
+            try await withCheckedThrowingContinuation { continuation in
                 let delegate = PhotoCaptureDelegate(
                     camera: camera,
                     continuation: continuation
@@ -71,6 +71,7 @@ public final class PhotoCapture: PhotoCaptureOutput, Logging {
         
         photoSettings.maxPhotoDimensions = dimensions
         photoSettings.photoQualityPrioritization = configuration.qualityPrioritization
+        photoSettings.livePhotoMovieFileURL = configuration.capturesLivePhoto ? URL.movieFileURL : nil
         
         if output.supportedFlashModes.contains(camera.flashMode) {
             photoSettings.flashMode = camera.flashMode
@@ -165,6 +166,7 @@ extension PhotoCapture {
                 output.isConstantColorEnabled = captureOptions.contains(.constantColor)
             }
         }
+        output.isLivePhotoCaptureEnabled = output.isLivePhotoCaptureSupported
     }
     
     @CameraActor
@@ -213,5 +215,16 @@ extension PhotoCapture {
     
     fileprivate func _removeInFlightPhotoDelegate(for uniqueID: Int64) {
         inFlightPhotoCaptureDelegates[uniqueID] = nil
+    }
+}
+
+// MARK: - Auxiliary
+
+fileprivate extension URL {
+    /// A unique output location to write a movie.
+    static var movieFileURL: URL {
+        URL.temporaryDirectory
+            .appending(component: UUID().uuidString)
+            .appendingPathExtension(for: .quickTimeMovie)
     }
 }
