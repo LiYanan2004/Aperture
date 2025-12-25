@@ -59,8 +59,18 @@ public struct CameraAccessoryContainer<LeadingAccessories: View, Content: View, 
                         width: proxy.secondaryLayoutStack.stack == .hstack ? mainContentRect?.minX : mainContentRect?.width,
                         height: proxy.secondaryLayoutStack.stack == .hstack ? mainContentRect?.height : mainContentRect?.minY
                     )
+                    let leadingAnchor = Alignment(
+                        horizontal: proxy.secondaryLayoutStack.stack == .vstack ? .center : .leading,
+                        vertical: proxy.secondaryLayoutStack.stack == .hstack ? .center : .top,
+                    )
+                    let trailingAnchor = Alignment(
+                        horizontal: proxy.secondaryLayoutStack.stack == .vstack ? .center : .trailing,
+                        vertical: proxy.secondaryLayoutStack.stack == .hstack ? .center : .bottom,
+                    )
                     leadingAccessories
-                        .ensureLayout(alignment: .leading)
+                        .ensureLayout(
+                            alignment: proxy.secondaryLayoutStack.order == .normal ? leadingAnchor : trailingAnchor
+                        )
                         .frame(
                             minWidth: proxy.secondaryLayoutStack.order == .normal ? topLeftSizeArea.width : nil,
                             minHeight: proxy.secondaryLayoutStack.order == .normal ? topLeftSizeArea.height : nil
@@ -70,7 +80,9 @@ public struct CameraAccessoryContainer<LeadingAccessories: View, Content: View, 
                         .frame(width: mainContentRect?.width, height: mainContentRect?.height)
                         .padding(spacing ?? .zero)
                     trailingAccessories
-                        .ensureLayout(alignment: .trailing)
+                        .ensureLayout(
+                            alignment: proxy.secondaryLayoutStack.order == .normal ? trailingAnchor : leadingAnchor
+                        )
                         .frame(
                             minWidth: proxy.secondaryLayoutStack.order == .reversed ? topLeftSizeArea.width : nil,
                             minHeight: proxy.secondaryLayoutStack.order == .reversed ? topLeftSizeArea.height : nil
