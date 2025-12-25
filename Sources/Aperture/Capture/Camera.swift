@@ -40,11 +40,10 @@ public final class Camera: SendableMetatype {
         self.coordinator = coordinator
         
         Task { @CameraActor in
+            await MainActor.run {
+                self.coordinator.camera = self
+            }
             coordinator.cameraInputDevice = device.captureDevice
-        }
-        
-        Task { @MainActor in
-            self.coordinator.camera = self
         }
     }
     

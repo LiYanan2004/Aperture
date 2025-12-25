@@ -71,7 +71,9 @@ public final class PhotoCapture: PhotoCaptureOutput, Logging {
         
         photoSettings.maxPhotoDimensions = dimensions
         photoSettings.photoQualityPrioritization = configuration.qualityPrioritization
+        #if os(iOS)
         photoSettings.livePhotoMovieFileURL = configuration.capturesLivePhoto ? URL.movieFileURL : nil
+        #endif
         
         if output.supportedFlashModes.contains(camera.flashMode) {
             photoSettings.flashMode = camera.flashMode
@@ -166,7 +168,9 @@ extension PhotoCapture {
                 output.isConstantColorEnabled = captureOptions.contains(.constantColor)
             }
         }
+        #if os(iOS)
         output.isLivePhotoCaptureEnabled = output.isLivePhotoCaptureSupported
+        #endif
     }
     
     @CameraActor

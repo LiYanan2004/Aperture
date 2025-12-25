@@ -31,9 +31,11 @@ final class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate, Loggi
         _ output: AVCapturePhotoOutput,
         willCapturePhotoFor resolvedSettings: AVCaptureResolvedPhotoSettings
     ) {
+        #if os(iOS)
         if !resolvedSettings.livePhotoMovieDimensions.isZero {
             camera.inProgressLivePhoto += 1
         }
+        #endif
         
         // Fully dim the preview and show it back.
         camera.previewDimming = true
@@ -50,6 +52,7 @@ final class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate, Loggi
         photoData = photo.fileDataRepresentation()
     }
     
+    #if os(iOS) && !targetEnvironment(macCatalyst)
     func photoOutput(
         _ output: AVCapturePhotoOutput,
         didFinishRecordingLivePhotoMovieForEventualFileAt outputFileURL: URL,
@@ -71,8 +74,7 @@ final class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate, Loggi
         }
         livePhotoMovieURL = outputFileURL
     }
-    
-    #if os(iOS) && !targetEnvironment(macCatalyst)
+
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishCapturingDeferredPhotoProxy deferredPhotoProxy: AVCaptureDeferredPhotoProxy?, error: Error?) {
         if let error = error {
             logger.error("There is an error when finishing capturing deferred photo: \(error.localizedDescription)")

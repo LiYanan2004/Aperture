@@ -28,6 +28,7 @@ struct CameraPreview {
             if let connection = preview.videoPreviewLayer.connection,
                connection.isVideoMirroringSupported {
                 if device.position == .unspecified {
+                    connection.automaticallyAdjustsVideoMirroring = false
                     connection.isVideoMirrored = true
                 } else {
                     connection.automaticallyAdjustsVideoMirroring = true
@@ -43,6 +44,7 @@ struct CameraPreview {
     }
     
     nonisolated func freezePreview(_ freeze: Bool, animated: Bool = true) {
+        #if canImport(UIKit)
         Task { @MainActor in
             if freeze {
                 preview._freezePreview(animated: animated)
@@ -50,6 +52,7 @@ struct CameraPreview {
                 preview._unfreezePreview(animated: animated)
             }
         }
+        #endif
     }
 }
 
@@ -88,11 +91,12 @@ extension CameraPreview {
         }
         
         #if os(macOS)
-        init() {
+        override init(frame frameRect: NSRect) {
             super.init(frame: .zero)
+            
             wantsLayer = true
             self.layer = CALayer()
-            self.layer?.addSublayer(previewLayer)
+            self.layer?.addSublayer(videoPreviewLayer)
         }
         
         required init?(coder: NSCoder) {
@@ -101,7 +105,7 @@ extension CameraPreview {
         
         override func layout() {
             super.layout()
-            previewLayer.frame = bounds
+            videoPreviewLayer.frame = bounds
         }
         #elseif os(iOS)
         override init(frame: CGRect) {
@@ -127,6 +131,7 @@ extension CameraPreview {
 
 // MARK: - Preview Freezing
 
+#if canImport(UIKit)
 extension CameraPreview._PlatformViewBackedPreview {
     
     static let crossfadeDuration: CGFloat = 0.15
@@ -134,18 +139,12 @@ extension CameraPreview._PlatformViewBackedPreview {
     func _freezePreview(animated: Bool) {
         guard _snapshotView == nil else { return }
         
-        #if os(macOS)
-        let rootLayer = self.layer! // we already set `wantsLayer` to true.
-        #else
-        let rootLayer = self.layer
-        #endif
-        
         let snapshotView = self.snapshotView(afterScreenUpdates: true)
         self._snapshotView = snapshotView
         guard let snapshotView else { return }
         
         let snapshotLayer = snapshotView.layer
-        rootLayer.addSublayer(snapshotLayer)
+        self.layer.addSublayer(snapshotLayer)
         
         snapshotLayer.frame = bounds
         snapshotLayer.opacity = 1
@@ -196,3 +195,4 @@ extension CameraPreview._PlatformViewBackedPreview {
         CATransaction.commit()
     }
 }
+#endif
