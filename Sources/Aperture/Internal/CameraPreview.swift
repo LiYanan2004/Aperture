@@ -25,8 +25,12 @@ struct CameraPreview {
     
     nonisolated func adjustPreview(for device: AVCaptureDevice) {
         Task { @MainActor in
-            if let connection = preview.videoPreviewLayer.connection,
-               connection.isVideoMirroringSupported {
+            guard let connection = preview.videoPreviewLayer.connection else { return }
+            #if os(iOS)
+            connection.preferredVideoStabilizationMode = .previewOptimized
+            #endif
+            
+            if connection.isVideoMirroringSupported {
                 if device.position == .unspecified {
                     connection.automaticallyAdjustsVideoMirroring = false
                     connection.isVideoMirrored = true

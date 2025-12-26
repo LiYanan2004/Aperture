@@ -110,9 +110,7 @@ extension CameraShutterButton {
             Task {
                 guard camera.captureSessionState == .running else { return }
                 do {
-                    let capturedPhoto = try await camera.takePhoto(
-                        configuration: configuration
-                    )
+                    let capturedPhoto = try await camera.takePhoto(configuration: configuration)
                     action(capturedPhoto)
                 } catch {
                     self.error = CaptureError(_error: error)

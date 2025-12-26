@@ -7,6 +7,9 @@
 
 import AVFoundation
 
-internal struct MovieCaptureConfiguration: Hashable, Sendable {
-    
+@_spi(Internal)
+public struct MovieCaptureConfiguration: Hashable, Sendable {
+    public init() {
+        
+    }
 }

@@ -39,14 +39,16 @@ final class CameraCoordinator: NSObject, Logging {
     /// The configuration of the camera.
     internal var configuration: CameraConfiguration {
         didSet {
-            Task { @CameraActor in
-                try await configureSession()
+            do {
+                try configureSession()
+            } catch {
+                logger.error("Failed to switch configuration: \(error.localizedDescription)")
             }
         }
     }
     
     /// Configure current session and corresponding capture pipeline with current configuration and devices.
-    internal func configureSession() async throws {
+    internal func configureSession() throws {
         setConfigurationState(true)
         captureSession.beginConfiguration()
         defer {
@@ -60,18 +62,20 @@ final class CameraCoordinator: NSObject, Logging {
         
         guard let inputDevice = cameraInputDevice else { throw CameraError.invalidCaptureDevice }
         
-        try configureSessionInput(device: inputDevice)
-        try await configureSessionOutputs()
+        configureSessionInput(device: inputDevice)
+        configureSessionOutputs()
         
         cameraPreview.connect(to: captureSession)
         cameraPreview.adjustPreview(for: inputDevice)
         
         setupRotationCoordinator(for: inputDevice)
+        
+        updateOutputServices()
     }
     
-    internal func switchCaptureDevice(to device: AVCaptureDevice) async throws {
+    internal func switchCaptureDevice(to device: AVCaptureDevice) throws {
         precondition(activeCameraInput != nil, "Switch capture device requires an existing capture device.")
-       
+        
         setConfigurationState(true)
         cameraPreview.freezePreview(true)
         captureSession.beginConfiguration()
@@ -98,19 +102,13 @@ final class CameraCoordinator: NSObject, Logging {
             captureSession.sessionPreset = configuration.sessionPreset
         }
         
-        guard let inputDevice = cameraInputDevice else { throw CameraError.invalidCaptureDevice }
-        try configureSessionInput(device: inputDevice)
-        
-        guard let camera = await self.camera else { return }
-        for output in outputs {
-            try output.updateOutput(camera)
-        }
-        
-        cameraPreview.adjustPreview(for: inputDevice)
-        setupRotationCoordinator(for: inputDevice)
+        configureSessionInput(device: device)
+        cameraPreview.adjustPreview(for: device)
+        setupRotationCoordinator(for: device)
+        updateOutputServices()
     }
     
-    private func configureSessionInput(device: AVCaptureDevice) throws {
+    private func configureSessionInput(device: AVCaptureDevice) {
         do {
             if let activeCameraInput {
                 captureSession.removeInput(activeCameraInput)
@@ -122,28 +120,60 @@ final class CameraCoordinator: NSObject, Logging {
             }
         }
         
+        updateDeviceSwitchOverZoomFactor(device: device)
+        
         let deviceHasFlash = self.cameraInputDevice.hasFlash
         updateCamera { camera in
             camera.flash.deviceEligible = deviceHasFlash
         }
     }
     
-    private func configureSessionOutputs() async throws {
-        let outputs: [any CaptureOutput] = if configuration.sessionPreset == .photo {
-            [photoOutput] // photo only
-        } else {
-            [photoOutput, videoOutput] // photo and video
+    private func configureSessionOutputs() {
+        guard let activeCameraInput else { return }
+        
+        let services = configuration.services
+        let activeOutputs = self.activeOutputs
+        
+        self.activeOutputs.forEach {
+            captureSession.removeOutput($0)
         }
         
-        captureSession.outputs.forEach { captureSession.removeOutput($0) }
-        for output in outputs {
-            try addOutput(output.output)
-        }
-        self.outputs = outputs
-        
-        guard let camera = await self.camera else { return }
-        for output in outputs {
-            try output.updateOutput(camera)
+        self.activeOutputs = []
+        do {
+            for service in services {
+                func makeOutput<S: OutputService>(service: S) -> AVCaptureOutput {
+                    let coordinator: S.Coordinator
+                    if let existingCoordinator = outputServiceCoordinators.first(byUnwrapping: {
+                        $0 as? S.Coordinator
+                    }) {
+                        coordinator = existingCoordinator
+                    } else {
+                        coordinator = service.makeCoordinator()
+                        outputServiceCoordinators.append(coordinator)
+                    }
+                    
+                    // FIXME: This is a backdoor for `PhotoCaptureService`
+                    if let coordinator = coordinator as? PhotoCaptureService.Coordinator {
+                        coordinator.cameraCoordinator = self
+                    }
+                    
+                    let context = OutputServiceContext<S>(
+                        coordinator: coordinator,
+                        session: captureSession,
+                        input: activeCameraInput
+                    )
+                    return service.makeOutput(context: context)
+                }
+                
+                let output = _openExistential(service, do: makeOutput(service:))
+                self.activeOutputs.append(output)
+                try addOutput(output)
+            }
+        } catch {
+            self.activeOutputs.forEach({ captureSession.removeOutput($0) })
+            
+            activeOutputs.forEach({ captureSession.addOutput($0) })
+            self.activeOutputs = activeOutputs
         }
     }
     
@@ -156,22 +186,20 @@ final class CameraCoordinator: NSObject, Logging {
             observeRotationCoordinator()
         }
     }
-
+    
     // MARK: - Input
     
     /// The active camera device input used by the session.
-    private var activeCameraInput: AVCaptureDeviceInput?
+    var activeCameraInput: AVCaptureDeviceInput?
     /// The active capture device used by the session.
     var cameraInputDevice: AVCaptureDevice! {
         didSet {
             guard let cameraInputDevice, activeCameraInput != nil else { return }
             
-            Task {
-                do {
-                    try await switchCaptureDevice(to: cameraInputDevice)
-                } catch {
-                    logger.error("\(error.localizedDescription)")
-                }
+            do {
+                try switchCaptureDevice(to: cameraInputDevice)
+            } catch {
+                logger.error("\(error.localizedDescription)")
             }
         }
     }
@@ -188,14 +216,43 @@ final class CameraCoordinator: NSObject, Logging {
         return deviceInput
     }
     
+    private func updateDeviceSwitchOverZoomFactor(device: AVCaptureDevice) {
+#if os(iOS)
+        var switchOverZoomFactor: CGFloat = 1
+        defer {
+            withCurrentCaptureDevice { device in
+                device.videoZoomFactor = switchOverZoomFactor
+            }
+            
+            updateCamera { camera in
+                camera.baseZoomFactor = switchOverZoomFactor
+                camera.zoomFactor = switchOverZoomFactor
+            }
+        }
+        
+        let wideAngleCameraOffset = device.constituentDevices
+            .enumerated()
+            .first(where: { $0.element.deviceType == .builtInWideAngleCamera })?
+            .offset
+        guard let wideAngleCameraOffset else { return }
+        
+        // "These factors progress in the same order as the devices listed in that property." -- documentation
+        // Since switchOverVideoZoomFactor count is N - 1 (where N == constituentDevices.count), shift left by one to remove 1.0x
+        let switchOverZoomFactorOffset = wideAngleCameraOffset - /* 1.0x */ 1
+        guard switchOverZoomFactorOffset >= 0 else { return }
+        
+        switchOverZoomFactor = CGFloat(
+            truncating: device.virtualDeviceSwitchOverVideoZoomFactors[switchOverZoomFactorOffset]
+        )
+#endif
+    }
+    
     // MARK: - Output
     
-    /// A video output for movie capturing.
-    nonisolated public let videoOutput = MovieCapture()
-    /// A photo output for photo capturing.
-    nonisolated public let photoOutput = PhotoCapture()
-    /// A set of currently active capture outputs.
-    public var outputs: [any CaptureOutput] = []
+    /// The active camera device input used by the session.
+    var activeOutputs: [AVCaptureOutput] = []
+    
+    var outputServiceCoordinators: [Any] = []
     
     /// Adds the capture output to the pipeline if possible.
     private func addOutput(_ output: AVCaptureOutput) throws(CameraError) {
@@ -203,6 +260,34 @@ final class CameraCoordinator: NSObject, Logging {
             captureSession.addOutput(output)
         } else {
             throw CameraError.failedToAddOutput
+        }
+    }
+    
+    /// Gets current context of the output service.
+    internal func outputContext<T: OutputService>(for: T.Type) -> OutputServiceContext<T>? {
+        guard let activeCameraInput else { return nil }
+        
+        let coordinator = outputServiceCoordinators.first(byUnwrapping: { $0 as? T.Coordinator })
+        guard let coordinator else { return nil }
+        
+        return .init(coordinator: coordinator, session: captureSession, input: activeCameraInput)
+    }
+    
+    private func updateOutputServices() {
+        func updateOutput<S: OutputService>(service: S) throws {
+            let output = activeOutputs.first(byUnwrapping: { $0 as? S.Output })
+            let context = outputContext(for: S.self)
+            
+            guard let output, let context else { throw CameraError.failedToUpdateOutputSevice }
+            service.updateOutput(output: output, context: context)
+        }
+        
+        for service in configuration.services {
+            do {
+                try _openExistential(service, do: updateOutput(service:))
+            } catch {
+                logger.error("Failed to update output service (\(String(reflecting: service))): \(error.localizedDescription)")
+            }
         }
     }
     
@@ -223,7 +308,10 @@ final class CameraCoordinator: NSObject, Logging {
             cancellables: &rotationObservers
         ) { [weak self] angle in
             Task { @CameraActor in
-                self?.outputs.forEach({ $0.setVideoRotationAngle(angle) })
+                guard let self else { return }
+                for output in self.activeOutputs {
+                    output.connection(with: .video)?.videoRotationAngle = angle
+                }
             }
             self?.updateCamera {
                 $0.captureRotationAngle = angle
@@ -243,7 +331,7 @@ final class CameraCoordinator: NSObject, Logging {
     }
     
     nonisolated public func withCurrentCaptureDevice(
-        perform action: @escaping @CameraActor (AVCaptureDevice) throws -> Void
+        perform action: @escaping (AVCaptureDevice) throws -> Void
     ) {
         Task {
             guard let cameraInputDevice = await cameraInputDevice else { return }
@@ -251,41 +339,10 @@ final class CameraCoordinator: NSObject, Logging {
                 try cameraInputDevice.lockForConfiguration()
                 defer { cameraInputDevice.unlockForConfiguration() }
                 
-                try await action(cameraInputDevice)
+                try action(cameraInputDevice)
             } catch {
                 logger.error("Cannot lock device for configuration: \(error.localizedDescription)")
             }
-        }
-    }
-    
-    // MARK: Actions
-    
-    @available(macOS, unavailable)
-    func setManualFocus(
-        pointOfInterst: CGPoint,
-        focusMode: AVCaptureDevice.FocusMode,
-        exposureMode: AVCaptureDevice.ExposureMode
-    ) {
-        withCurrentCaptureDevice { device in
-            guard device.isFocusPointOfInterestSupported,
-                  device.isExposurePointOfInterestSupported else {
-                self.logger.warning("Current device doesn't support focusing or exposing point of interst.")
-                return
-            }
-            device.focusPointOfInterest = pointOfInterst
-            if device.isFocusModeSupported(focusMode) {
-                device.focusMode = focusMode
-            }
-            
-            device.setExposureTargetBias(Float.zero)
-            device.exposurePointOfInterest = pointOfInterst
-            if device.isExposureModeSupported(exposureMode) {
-                device.exposureMode = exposureMode
-            }
-            
-            let locked = focusMode == .locked || exposureMode == .locked
-            // Enable `SubjectAreaChangeMonitoring` to reset focus at appropriate time
-            device.isSubjectAreaChangeMonitoringEnabled = !locked
         }
     }
 }

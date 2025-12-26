@@ -8,9 +8,9 @@
 import AVFoundation
 
 public struct PhotoCaptureConfiguration: Hashable, Sendable {
-    public var capturesLivePhoto: Bool
-    public var resolution: Resolution
-    public var qualityPrioritization: AVCapturePhotoOutput.QualityPrioritization
+    public var capturesLivePhoto: Bool = false
+    public var resolution: Resolution = .maximumSupported
+    public var qualityPrioritization: AVCapturePhotoOutput.QualityPrioritization = .balanced
     
     public init(
         capturesLivePhoto: Bool = false,

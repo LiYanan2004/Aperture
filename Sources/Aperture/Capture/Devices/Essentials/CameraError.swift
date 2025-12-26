@@ -7,6 +7,23 @@
 
 import Foundation
 
+public enum CaptureError: LocalizedError {
+    case photoOutputServiceNotAvailable
+    case movieOutputServiceNotAvailable
+    case noContext
+    
+    public var errorDescription: String? {
+        switch self {
+            case .photoOutputServiceNotAvailable:
+                "Photo output service is not available."
+            case .movieOutputServiceNotAvailable:
+                "Movie output service is not available."
+            case .noContext:
+                "Failed to construct context for this service."
+        }
+    }
+}
+
 public enum CameraError: LocalizedError {
     case invalidCaptureDevice
     case permissionDenied
@@ -14,6 +31,7 @@ public enum CameraError: LocalizedError {
     case sessionAlreadStarted
     case failedToAddOutput
     case failedToAddInput
+    case failedToUpdateOutputSevice
     
     public var errorDescription: String? {
         switch self {
@@ -29,6 +47,8 @@ public enum CameraError: LocalizedError {
                 "Failed to add the capture input to the session."
             case .failedToAddOutput:
                 "Failed to add the capture output to the session."
+            case .failedToUpdateOutputSevice:
+                "Failed to update output service"
         }
     }
 }

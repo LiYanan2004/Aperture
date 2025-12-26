@@ -13,7 +13,7 @@ import Combine
 
 /// An observable camera instance camera feed, photo capturing, and more.
 @Observable
-public final class Camera: SendableMetatype {
+public final class Camera: SendableMetatype, Logging {
     /// A camera coordinator that consists of camera IO, session, rotation coordinator, etc.
     let coordinator: CameraCoordinator
 
@@ -28,6 +28,14 @@ public final class Camera: SendableMetatype {
             }
         }
     }
+    
+    public var configuration: CameraConfiguration {
+        willSet {
+            Task { @CameraActor in
+                coordinator.configuration = newValue
+            }
+        }
+    }
 
     /// Create a camera instance with a specific device and configuration.
     public init(
@@ -35,6 +43,7 @@ public final class Camera: SendableMetatype {
         configuration: CameraConfiguration
     ) {
         self.device = device
+        self.configuration = configuration
         
         let coordinator = CameraCoordinator(configuration: configuration)
         self.coordinator = coordinator
@@ -63,7 +72,7 @@ public final class Camera: SendableMetatype {
         guard captureSessionState != .running else { throw CameraError.sessionAlreadStarted }
 
         Task { @CameraActor in
-            try await coordinator.configureSession()
+            try coordinator.configureSession()
             if !coordinator.captureSession.isRunning {
                 coordinator.captureSession.startRunning()
             }
@@ -120,6 +129,7 @@ public final class Camera: SendableMetatype {
         userSelectedMode: .off,
         isFlashRecommendedByScene: false
     )
+    
     /// An observable boolean value indicates whether the focus is locked by user (via long press).
     ///
     /// - SeeAlso: ``CameraViewFinder``
@@ -146,41 +156,95 @@ public final class Camera: SendableMetatype {
         zoomFactor / baseZoomFactor
     }
     #endif
+    
+    @available(macOS, unavailable)
+    func setManualFocus(
+        pointOfInterst: CGPoint,
+        focusMode: AVCaptureDevice.FocusMode,
+        exposureMode: AVCaptureDevice.ExposureMode
+    ) {
+        coordinator.withCurrentCaptureDevice { device in
+            guard device.isFocusPointOfInterestSupported,
+                  device.isExposurePointOfInterestSupported else {
+                self.logger.warning("Current device doesn't support focusing or exposing point of interst.")
+                return
+            }
+            device.focusPointOfInterest = pointOfInterst
+            if device.isFocusModeSupported(focusMode) {
+                device.focusMode = focusMode
+            }
+            
+            device.setExposureTargetBias(Float.zero)
+            device.exposurePointOfInterest = pointOfInterst
+            if device.isExposureModeSupported(exposureMode) {
+                device.exposureMode = exposureMode
+            }
+            
+            let locked = focusMode == .locked || exposureMode == .locked
+            // Enable `SubjectAreaChangeMonitoring` to reset focus at appropriate time
+            device.isSubjectAreaChangeMonitoringEnabled = !locked
+        }
+    }
+    
+    // MARK: - Internal Capture States
+    
+    private var inFlightPhotoCaptureDelegates: [Int64: PhotoCaptureDelegate] = [:]
 }
 
-// MARK: - Camera Actions
+// MARK: - Photo Capture
 
 extension Camera {
     /// Takes a photo of current scene.
     nonisolated public func takePhoto(configuration: PhotoCaptureConfiguration) async throws -> CapturedPhoto {
-        try await coordinator.photoOutput.takePhoto(from: self, configuration: configuration)
-    }
-    
-    nonisolated private func recordVideo(configuration: MovieCaptureConfiguration) async throws {
-        fatalError("Unimplemented")
-    }
-}
+        let context = await coordinator.outputContext(for: PhotoCaptureService.self)
+        guard let context else { throw CaptureError.noContext }
+        
+        let photoOutput = await coordinator.activeOutputs.first(byUnwrapping: { $0 as? AVCapturePhotoOutput })
+        let service = self.configuration.photoCaptureService
+        guard let photoOutput, let service else { throw CaptureError.photoOutputServiceNotAvailable }
+        
+        let photoSettings = try await service.photoSettings(
+            output: photoOutput,
+            configuration: configuration,
+            context: context
+        )
+        let capturedPhoto = try await withPhotoOutputReadinessCoordinatorTracking(
+            output: photoOutput,
+            photoSettings: photoSettings
+        ) {
+            try await withCheckedThrowingContinuation { continuation in
+                let delegate = PhotoCaptureDelegate(
+                    camera: self,
+                    continuation: continuation
+                )
+                inFlightPhotoCaptureDelegates[photoSettings.uniqueID] = delegate
 
-// MARK: - Option Updates
-
-extension Camera {
-    
-    /// Adjust capture pipeline to fit the requested capture options if the device statisfy the requirements.
-    ///
-    /// - note: Updating this vlaue after running the session will trigger a session re-configuration if the option updates.
-    /// - SeeAlso: ``photoCaptureOptions``
-    nonisolated public func setPhotoCaptureOptions(
-        _ options: RequestedPhotoCaptureOptions
-    ) {
-        photoCaptureOptions = options
-        Task { @CameraActor in
-            guard coordinator.photoOutput.captureOptions != options else { return }
-            coordinator.photoOutput.captureOptions = options
-            
-            if captureSessionState != .idle {
-                try await coordinator.configureSession()
+                photoOutput.capturePhoto(with: photoSettings, delegate: delegate)
             }
         }
+        
+        inFlightPhotoCaptureDelegates[photoSettings.uniqueID] = nil
+        
+        return capturedPhoto
+    }
+    
+    private func withPhotoOutputReadinessCoordinatorTracking<T>(
+        output: AVCapturePhotoOutput,
+        photoSettings: AVCapturePhotoSettings,
+        perform action: () async throws -> T
+    ) async rethrows -> T {
+        var readinessCoordinator: AVCapturePhotoOutputReadinessCoordinator?
+        #if os(iOS)
+        readinessCoordinator = AVCapturePhotoOutputReadinessCoordinator(photoOutput: output)
+        
+        let delegate = PhotoReadinessCoordinatorDelegate(camera: self)
+        defer { _ = delegate }
+        readinessCoordinator?.delegate = delegate
+        #endif
+        
+        readinessCoordinator?.startTrackingCaptureRequest(using: photoSettings)
+        defer { readinessCoordinator?.stopTrackingCaptureRequest(using: photoSettings.uniqueID) }
+        return try await action()
     }
 }
 
