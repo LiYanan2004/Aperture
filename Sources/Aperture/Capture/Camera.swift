@@ -101,8 +101,6 @@ public final class Camera: SendableMetatype {
     internal(set) public var isBusyProcessing = false
     /// An observable boolean value indicates whether the shutter is disabled for some reason.
     internal(set) public var shutterDisabled = false
-    /// An observable integer value indicates how many live photo capturing is in progress.
-    internal(set) public var inProgressLivePhoto = 0
     
     /// Requested photo capture options.
     ///
@@ -113,9 +111,15 @@ public final class Camera: SendableMetatype {
     ///
     /// - SeeAlso: ``setPhotoCaptureOptions(_:)``
     internal(set) public var photoCaptureOptions: RequestedPhotoCaptureOptions = []
+    /// An observable integer value indicates how many live photo capturing is in progress.
+    internal(set) public var inProgressLivePhotoCount = 0
     
-    /// An observable value indicates current flash mode for capturing.
-    public var flashMode: AVCaptureDevice.FlashMode = .off
+    /// An observable value indicates flash state of current capture device for the capturing.
+    public var flash = CameraFlash(
+        deviceEligible: false, // this will be updated during session setup
+        userSelectedMode: .off,
+        isFlashRecommendedByScene: false
+    )
     /// An observable boolean value indicates whether the focus is locked by user (via long press).
     ///
     /// - SeeAlso: ``CameraViewFinder``

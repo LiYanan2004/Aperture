@@ -33,7 +33,9 @@ final class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate, Loggi
     ) {
         #if os(iOS)
         if !resolvedSettings.livePhotoMovieDimensions.isZero {
-            camera.inProgressLivePhoto += 1
+            Task { @MainActor in
+                camera.inProgressLivePhotoCount += 1
+            }
         }
         #endif
         
@@ -58,7 +60,9 @@ final class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate, Loggi
         didFinishRecordingLivePhotoMovieForEventualFileAt outputFileURL: URL,
         resolvedSettings: AVCaptureResolvedPhotoSettings
     ) {
-        camera.inProgressLivePhoto -= 1
+        Task { @MainActor in
+            camera.inProgressLivePhotoCount -= 1
+        }
     }
     
     func photoOutput(

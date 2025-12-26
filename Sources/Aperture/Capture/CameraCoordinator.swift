@@ -14,7 +14,7 @@ import SwiftUI
 @CameraActor
 final class CameraCoordinator: NSObject, Logging {
     /// The ``Camera`` instance.
-    @MainActor weak var camera: Camera?
+    @MainActor weak var camera: Camera!
     /// The capture preview.
     nonisolated let cameraPreview = CameraPreview()
     
@@ -121,6 +121,11 @@ final class CameraCoordinator: NSObject, Logging {
                 captureSession.addInput(activeCameraInput)
             }
         }
+        
+        let deviceHasFlash = self.cameraInputDevice.hasFlash
+        updateCamera { camera in
+            camera.flash.deviceEligible = deviceHasFlash
+        }
     }
     
     private func configureSessionOutputs() async throws {
@@ -220,8 +225,8 @@ final class CameraCoordinator: NSObject, Logging {
             Task { @CameraActor in
                 self?.outputs.forEach({ $0.setVideoRotationAngle(angle) })
             }
-            Task { @MainActor in
-                self?.camera?.captureRotationAngle = angle
+            self?.updateCamera {
+                $0.captureRotationAngle = angle
             }
         }
         
@@ -230,8 +235,8 @@ final class CameraCoordinator: NSObject, Logging {
             keyPath: \.videoRotationAngleForHorizonLevelPreview,
             cancellables: &rotationObservers
         ) { [weak self] angle in
-            Task { @MainActor in
-                self?.camera?.previewRotationAngle = angle
+            self?.updateCamera { camera in
+                camera.previewRotationAngle = angle
                 self?.cameraPreview.preview.videoPreviewLayer.connection?.videoRotationAngle = angle
             }
         }
@@ -288,16 +293,25 @@ final class CameraCoordinator: NSObject, Logging {
 // MARK: - Auxiliary
 
 extension CameraCoordinator {
-    nonisolated private func setConfigurationState(_ isConfiguring: Bool) {
+    nonisolated private func updateCamera(
+        perform action: @escaping @MainActor (Camera) async -> Void
+    ) {
         Task { @MainActor [weak self] in
             guard let self else { return }
-            let currentState = self.camera?.captureSessionState
+            precondition(self.camera != nil, "Camera is not available.")
+            await action(self.camera)
+        }
+    }
+    
+    nonisolated private func setConfigurationState(_ isConfiguring: Bool) {
+        updateCamera { camera in
+            let currentState = camera.captureSessionState
             
             switch (currentState, isConfiguring) {
                 case (.running, true):
                     self.camera?.captureSessionState = .configuring
                 case (.configuring, false):
-                    self.camera?.captureSessionState = await captureSession.isRunning ? .running : .idle
+                    self.camera?.captureSessionState = await self.captureSession.isRunning ? .running : .idle
                 default:
                     break
             }

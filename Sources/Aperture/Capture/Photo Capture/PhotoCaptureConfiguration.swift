@@ -13,11 +13,11 @@ public struct PhotoCaptureConfiguration: Hashable, Sendable {
     public var qualityPrioritization: AVCapturePhotoOutput.QualityPrioritization
     
     public init(
-        isLivePhoto: Bool = false,
+        capturesLivePhoto: Bool = false,
         resolution: Resolution = .maximumSupported,
         qualityPrioritization: AVCapturePhotoOutput.QualityPrioritization = .balanced
     ) {
-        self.capturesLivePhoto = isLivePhoto
+        self.capturesLivePhoto = capturesLivePhoto
         self.resolution = resolution
         self.qualityPrioritization = qualityPrioritization
     }

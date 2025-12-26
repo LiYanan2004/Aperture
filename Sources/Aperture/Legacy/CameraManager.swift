@@ -224,6 +224,7 @@ public final class CameraManager: NSObject, @unchecked Sendable {
                     // Switch back to main thread to perform animation
                     Task { @MainActor in
                         // Fade out the old preview
+                        // Fade out the old preview
                         withAnimation(.bouncy(duration: 0.3)) {
                             self.dimCameraPreview = 0.9
                         }

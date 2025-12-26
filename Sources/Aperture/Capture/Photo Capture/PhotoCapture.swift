@@ -7,13 +7,19 @@
 
 import AVFoundation
 import Foundation
+import Combine
 
 public protocol PhotoCaptureOutput: CaptureOutput where Output == AVCapturePhotoOutput {
+    var sceneMonitoringPhotoSettings: AVCapturePhotoSettings { get }
+    
     func takePhoto(from camera: Camera, configuration: PhotoCaptureConfiguration) async throws -> CapturedPhoto
 }
 
 public final class PhotoCapture: PhotoCaptureOutput, Logging {
     public let output = AVCapturePhotoOutput()
+    public let sceneMonitoringPhotoSettings = AVCapturePhotoSettings()
+    private var sceneObservers: Set<AnyCancellable> = []
+    
     public var captureOptions: RequestedPhotoCaptureOptions = []
     private var inFlightPhotoCaptureDelegates: [Int64: PhotoCaptureDelegate] = [:]
     
@@ -21,6 +27,15 @@ public final class PhotoCapture: PhotoCaptureOutput, Logging {
         
     }
     
+    @CameraActor
+    public func updateOutput(_ camera: Camera) throws {
+        _setupFusionCameraIfNecessary(camera)
+        _configurePreviewStabilizationMode(camera)
+        try _configurePhotoOutput(camera)
+    }
+}
+
+extension PhotoCapture {
     nonisolated public func takePhoto(
         from camera: Camera,
         configuration: PhotoCaptureConfiguration = .init()
@@ -75,8 +90,8 @@ public final class PhotoCapture: PhotoCaptureOutput, Logging {
         photoSettings.livePhotoMovieFileURL = configuration.capturesLivePhoto ? URL.movieFileURL : nil
         #endif
         
-        if output.supportedFlashModes.contains(camera.flashMode) {
-            photoSettings.flashMode = camera.flashMode
+        if output.supportedFlashModes.contains(camera.flash.userSelectedMode) {
+            photoSettings.flashMode = camera.flash.userSelectedMode
         }
         
         @available(iOS 18.0, macOS 15.0, tvOS 18.0, macCatalyst 18.0, *)
@@ -86,7 +101,7 @@ public final class PhotoCapture: PhotoCaptureOutput, Logging {
                 logger.error("[Constant Color] Current device doesn't support constant color.")
                 return
             }
-            guard camera.flashMode != .off else {
+            guard camera.flash.userSelectedMode != .off else {
                 logger.error("[Constant Color] Constant color is unavailable when flash mode is off.")
                 return
             }
@@ -126,18 +141,22 @@ public final class PhotoCapture: PhotoCaptureOutput, Logging {
         defer { readinessCoordinator?.stopTrackingCaptureRequest(using: photoSettings.uniqueID) }
         return try await action()
     }
-    
-    @CameraActor
-    public func updateOutput(_ camera: Camera) throws {
-        _setupFusionCameraIfNecessary(camera)
-        _configurePreviewStabilizationMode(camera)
-        try _configurePhotoOutput(camera)
-    }
 }
 
 extension PhotoCapture {
     @CameraActor
-    private func _configurePhotoOutput(_ camera: Camera) throws {
+    private func _configurePhotoOutput(_ camera: Camera) throws {        
+        sceneMonitoringPhotoSettings.flashMode = .auto
+        output.photoSettingsForSceneMonitoring = sceneMonitoringPhotoSettings
+        withValueObservation(
+            of: output,
+            keyPath: \.isFlashScene,
+            cancellables: &sceneObservers
+        ) { isFlashScene in
+            Task { @MainActor in
+                camera.flash.isFlashRecommendedByScene = isFlashScene
+            }
+        }
         
         #if !os(watchOS) && !os(visionOS)
         output.maxPhotoQualityPrioritization = .quality
