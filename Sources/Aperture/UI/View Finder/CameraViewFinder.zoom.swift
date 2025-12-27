@@ -36,19 +36,12 @@ extension CameraViewFinder {
             MagnifyGesture()
                 #if os(iOS)
                 .onChanged { value in
-                    guard let captureDevice = device?.captureDevice else { return }
-                    
                     if initialFactor == nil {
-                        do {
-                            try captureDevice.lockForConfiguration()
-                            self.initialFactor = camera.zoomFactor
-                        } catch {
-                            camera.coordinator.logger.error("Zoom gesture failed: \(error.localizedDescription)")
-                        }
+                        self.initialFactor = camera.zoomFactor
                     }
                     guard let initialFactor else { return }
                     
-                    if captureDevice.position == .front {
+                    if camera.device.captureDevice?.position == .front {
                         // Toggle between 12MP and 8MP for front device
                         camera.zoomFactor = value.magnification > 1 ? 1.3 : 1
                     } else {
@@ -57,7 +50,6 @@ extension CameraViewFinder {
                     }
                 }
                 .onEnded { _ in
-                    device?.captureDevice?.unlockForConfiguration()
                     initialFactor = nil
                 }
                 #endif
