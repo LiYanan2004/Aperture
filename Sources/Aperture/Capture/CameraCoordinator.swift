@@ -18,8 +18,8 @@ final class CameraCoordinator: NSObject, Logging {
     /// The capture preview.
     nonisolated let cameraPreview = CameraPreview()
     
-    nonisolated internal init(configuration: CameraConfiguration) {
-        self.configuration = configuration
+    nonisolated internal init(configuration: CameraCaptureProfile) {
+        self.profile = configuration
         super.init()
     }
     
@@ -36,18 +36,20 @@ final class CameraCoordinator: NSObject, Logging {
     
     /// The capture session.
     internal let captureSession = AVCaptureSession()
-    /// The configuration of the camera.
-    internal var configuration: CameraConfiguration {
+    /// The active capture profile applied to the underlying `AVCaptureSession`.
+    ///
+    /// - note: Update this value would trigger a session re-configuration.
+    internal var profile: CameraCaptureProfile {
         didSet {
             do {
                 try configureSession()
             } catch {
-                logger.error("Failed to switch configuration: \(error.localizedDescription)")
+                logger.error("Failed to switch profile: \(error.localizedDescription)")
             }
         }
     }
     
-    /// Configure current session and corresponding capture pipeline with current configuration and devices.
+    /// Configure current session and corresponding capture pipeline with current profile and devices.
     internal func configureSession() throws {
         setConfigurationState(true)
         captureSession.beginConfiguration()
@@ -56,8 +58,8 @@ final class CameraCoordinator: NSObject, Logging {
             setConfigurationState(false)
         }
         
-        if captureSession.canSetSessionPreset(configuration.sessionPreset) {
-            captureSession.sessionPreset = configuration.sessionPreset
+        if captureSession.canSetSessionPreset(profile.sessionPreset) {
+            captureSession.sessionPreset = profile.sessionPreset
         }
         
         guard let inputDevice = cameraInputDevice else { throw CameraError.invalidCaptureDevice }
@@ -98,8 +100,8 @@ final class CameraCoordinator: NSObject, Logging {
             }
         }
         
-        if captureSession.canSetSessionPreset(configuration.sessionPreset) {
-            captureSession.sessionPreset = configuration.sessionPreset
+        if captureSession.canSetSessionPreset(profile.sessionPreset) {
+            captureSession.sessionPreset = profile.sessionPreset
         }
         
         configureSessionInput(device: device)
@@ -148,7 +150,7 @@ final class CameraCoordinator: NSObject, Logging {
     private func configureSessionOutputs() {
         guard let activeCameraInput else { return }
         
-        let services = configuration.services
+        let services = profile.outputServices
         let activeOutputs = self.activeOutputs
         
         self.activeOutputs.forEach {
@@ -327,7 +329,7 @@ final class CameraCoordinator: NSObject, Logging {
             service.updateOutput(output: output, context: context)
         }
         
-        for service in configuration.services {
+        for service in profile.outputServices {
             do {
                 try _openExistential(service, do: updateOutput(service:))
             } catch {

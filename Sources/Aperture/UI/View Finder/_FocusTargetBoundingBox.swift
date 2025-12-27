@@ -273,9 +273,12 @@ extension _FocusTargetBoundingBox {
 
 #if os(iOS)
 #Preview {
-    _FocusTargetBoundingBox(camera: Camera(device: .builtInCamera(), configuration: .photo), focusMode: .manualFocusLocking)
-        .frame(width: 100, height: 100)
-        .preferredColorScheme(.dark)
-        .coordinateSpace(.named("PREVIEW"))
+    _FocusTargetBoundingBox(
+        camera: Camera(device: .builtInCamera(), profile: .photo),
+        focusMode: .manualFocusLocking
+    )
+    .frame(width: 100, height: 100)
+    .preferredColorScheme(.dark)
+    .coordinateSpace(.named("PREVIEW"))
 }
 #endif
