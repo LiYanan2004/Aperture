@@ -27,15 +27,14 @@ public struct CameraZoomReader<Content: View>: View {
     @State private var nextZoomFactor: CGFloat = 1.0
 
     public var body: some View {
-        content(
-            CameraZoomProxy {
-                #if os(iOS)
-                nextZoomFactor = camera.zoomFactor
-                #endif
-            } updateZoomFactor: {
-                nextZoomFactor = $0
-            }
-        )
+        let proxy = CameraZoomProxy {
+            #if os(iOS)
+            nextZoomFactor = camera.zoomFactor
+            #endif
+        } updateZoomFactor: {
+            nextZoomFactor = $0
+        }
+        content(proxy)
         .modifier(_CameraZoomModifier(camera: camera, nextZoomFactor: nextZoomFactor))
     }
 }

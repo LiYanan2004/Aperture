@@ -28,9 +28,9 @@ extension Camera {
         /// An observable angle to apply to the preview layer so that it’s level relative to gravity.
         ///
         /// You can use this value to rotate the UI of camera controls if you does not support certain orientation (for example: portrait mode only).
-        internal(set) public var previewRotationAngle: CGFloat = 0
+        internal(set) public var previewRotationAngle: CGFloat? = nil
         /// An observable angle to apply to photos or videos it captures with the device so that they’re level relative to gravity.
-        internal(set) public var captureRotationAngle: CGFloat = 0
+        internal(set) public var captureRotationAngle: CGFloat? = nil
         
         /// An observable boolean value indicates whether the preview layer is dimming.
         internal(set) public var previewDimming = false

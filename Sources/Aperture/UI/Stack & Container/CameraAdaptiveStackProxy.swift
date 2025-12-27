@@ -11,7 +11,7 @@ public struct CameraAdaptiveStackProxy {
     public var primaryLayoutStack: StackConfiguration
     public var secondaryLayoutStack: StackConfiguration
     
-    init(interfaceRotationAngle: CGFloat) {
+    internal init(interfaceRotationAngle: CGFloat) {
         switch ProcessInfo.processInfo.deviceType {
             case .pad:
                 primaryLayoutStack = .init(stack: .zstack, order: .normal)
