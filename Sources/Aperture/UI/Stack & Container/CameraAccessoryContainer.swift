@@ -67,25 +67,36 @@ public struct CameraAccessoryContainer<LeadingAccessories: View, Content: View, 
                         horizontal: proxy.secondaryLayoutStack.stack == .vstack ? .center : .trailing,
                         vertical: proxy.secondaryLayoutStack.stack == .hstack ? .center : .bottom,
                     )
+                    let isRegularLayout = proxy.primaryLayoutStack.stack != .zstack
                     leadingAccessories
-                        .ensureLayout(
-                            alignment: proxy.secondaryLayoutStack.order == .normal ? leadingAnchor : trailingAnchor
+                        .adoptsProposedSize(
+                            alignment: proxy.secondaryLayoutStack.order == .normal ? leadingAnchor : trailingAnchor,
+                            isEnabled: isRegularLayout
                         )
                         .frame(
-                            minWidth: proxy.secondaryLayoutStack.order == .normal ? topLeftSizeArea.width : nil,
-                            minHeight: proxy.secondaryLayoutStack.order == .normal ? topLeftSizeArea.height : nil
+                            idealWidth: proxy.secondaryLayoutStack.order == .normal ? topLeftSizeArea.width : nil,
+                            idealHeight: proxy.secondaryLayoutStack.order == .normal ? topLeftSizeArea.height : nil
+                        )
+                        .fixedSize(
+                            horizontal: proxy.secondaryLayoutStack.order == .normal && isRegularLayout,
+                            vertical: proxy.secondaryLayoutStack.order == .normal && isRegularLayout
                         )
                     EmptyView()
-                        .ensureLayout()
+                        .adoptsProposedSize(isEnabled: isRegularLayout)
                         .frame(width: mainContentRect?.width, height: mainContentRect?.height)
                         .padding(spacing ?? .zero)
                     trailingAccessories
-                        .ensureLayout(
-                            alignment: proxy.secondaryLayoutStack.order == .normal ? trailingAnchor : leadingAnchor
+                        .adoptsProposedSize(
+                            alignment: proxy.secondaryLayoutStack.order == .normal ? trailingAnchor : leadingAnchor,
+                            isEnabled: isRegularLayout
                         )
                         .frame(
-                            minWidth: proxy.secondaryLayoutStack.order == .reversed ? topLeftSizeArea.width : nil,
-                            minHeight: proxy.secondaryLayoutStack.order == .reversed ? topLeftSizeArea.height : nil
+                            idealWidth: proxy.secondaryLayoutStack.order == .reversed ? topLeftSizeArea.width : nil,
+                            idealHeight: proxy.secondaryLayoutStack.order == .reversed ? topLeftSizeArea.height : nil
+                        )
+                        .fixedSize(
+                            horizontal: proxy.secondaryLayoutStack.order == .reversed && isRegularLayout,
+                            vertical: proxy.secondaryLayoutStack.order == .reversed && isRegularLayout
                         )
                 }
             }

@@ -67,12 +67,12 @@ public struct CameraAdaptiveStackProxy {
         
         public func layout(spacing: CGFloat? = nil) -> AnyLayout {
             switch stack {
-            case .vstack:
-                AnyLayout(VStackLayout(spacing: spacing))
-            case .hstack:
-                AnyLayout(HStackLayout(spacing: spacing))
-            case .zstack:
-                AnyLayout(ZStackLayout())
+                case .vstack:
+                    AnyLayout(VStackLayout(spacing: spacing))
+                case .hstack:
+                    AnyLayout(HStackLayout(spacing: spacing))
+                case .zstack:
+                    AnyLayout(ZStackLayout(alignment: .trailing))
             }
         }
     }

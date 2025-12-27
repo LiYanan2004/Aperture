@@ -37,7 +37,7 @@ public struct CameraShutterButton: View {
             configuration: configuration,
             action: action
         )
-        .ensureLayout()
+        .adoptsProposedSize()
         .aspectRatio(1, contentMode: .fit)
         .frame(width: buttonSize)
         .disabled(camera.shutterDisabled)
