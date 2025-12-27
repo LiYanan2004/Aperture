@@ -13,6 +13,7 @@ import Combine
 
 /// An observable camera instance camera feed, photo capturing, and more.
 @Observable
+@dynamicMemberLookup
 public final class Camera: SendableMetatype, Logging {
     /// A camera coordinator that consists of camera IO, session, rotation coordinator, etc.
     let coordinator: CameraCoordinator
@@ -47,6 +48,11 @@ public final class Camera: SendableMetatype, Logging {
         
         let coordinator = CameraCoordinator(configuration: configuration)
         self.coordinator = coordinator
+        self.state = State(camera: nil) // link later
+        
+        Task { @MainActor in
+            self.state.camera = self
+        }
         
         Task { @CameraActor in
             await MainActor.run {
@@ -57,20 +63,14 @@ public final class Camera: SendableMetatype, Logging {
     }
     
     // MARK: - Session Management
-
-    /// A obvserable value indicates the current state of the session.
-    public var captureSessionState: CaptureSessionState = .idle
-    public enum CaptureSessionState {
-        case idle
-        case running
-        case configuring
-    }
     
     /// Starts the session.
     public func startRunning() async throws {
         guard await Camera.isAccessible else { throw CameraError.permissionDenied }
-        guard captureSessionState != .running else { throw CameraError.sessionAlreadStarted }
+        guard self.captureSessionState == .idle else { throw CameraError.sessionAlreadStarted }
 
+        state = State(camera: self) // reset state
+        
         Task { @CameraActor in
             try coordinator.configureSession()
             if !coordinator.captureSession.isRunning {
@@ -87,75 +87,115 @@ public final class Camera: SendableMetatype, Logging {
     
     /// Stops the session.
     public func stopRunning() {
+        self.captureSessionState = .idle
         Task { @CameraActor in
             coordinator.captureSession.stopRunning()
-            if coordinator.captureSession.isRunning == false {
-                self.captureSessionState = .idle
-            }
         }
     }
     
     // MARK: - Camera State
+    
+    @Observable
+    public final class State: SendableMetatype {
+        unowned fileprivate var camera: Camera!
+        
+        fileprivate init(camera: Camera!) {
+            self.camera = camera
+        }
+        
+        /// A obvserable value indicates the current state of the session.
+        public var captureSessionState: CaptureSessionState = .idle
+        public enum CaptureSessionState {
+            case idle
+            case running
+            case configuring
+        }
 
-    /// An observable angle to apply to the preview layer so that it’s level relative to gravity.
-    ///
-    /// You can use this value to rotate the UI of camera controls if you does not support certain orientation (for example: portrait mode only).
-    internal(set) public var previewRotationAngle: CGFloat = 0
-    /// An observable angle to apply to photos or videos it captures with the device so that they’re level relative to gravity.
-    internal(set) public var captureRotationAngle: CGFloat = 0
-    
-    /// An observable boolean value indicates whether the preview layer is dimming.
-    internal(set) public var previewDimming = false
-    /// An observable boolean value indicates whether the system is busy processing captured photo.
-    internal(set) public var isBusyProcessing = false
-    /// An observable boolean value indicates whether the shutter is disabled for some reason.
-    internal(set) public var shutterDisabled = false
-    
-    /// Requested photo capture options.
-    ///
-    /// > Tip:
-    /// > You can update this value via ``setPhotoCaptureOptions(_:)``.
-    /// >
-    /// > Note that updating this vlaue after running the session will trigger a session re-configuration if the option updates.
-    ///
-    /// - SeeAlso: ``setPhotoCaptureOptions(_:)``
-    internal(set) public var photoCaptureOptions: RequestedPhotoCaptureOptions = []
-    /// An observable integer value indicates how many live photo capturing is in progress.
-    internal(set) public var inProgressLivePhotoCount = 0
-    
-    /// An observable value indicates flash state of current capture device for the capturing.
-    public var flash = CameraFlash(
-        deviceEligible: false, // this will be updated during session setup
-        userSelectedMode: .off,
-        isFlashRecommendedByScene: false
-    )
-    
-    /// An observable boolean value indicates whether the focus is locked by user (via long press).
-    ///
-    /// - SeeAlso: ``CameraViewFinder``
-    internal(set) public var focusLocked = false
-    #if os(iOS)
-    /// A value that controls the cropping and enlargement of images captured by the device.
-    public var zoomFactor: CGFloat = 1.0 {
-        willSet {
-            guard newValue != self.zoomFactor else { return }
-            
-            coordinator.withCurrentCaptureDevice { device in
-                device.videoZoomFactor = newValue
+        /// An observable angle to apply to the preview layer so that it’s level relative to gravity.
+        ///
+        /// You can use this value to rotate the UI of camera controls if you does not support certain orientation (for example: portrait mode only).
+        internal(set) public var previewRotationAngle: CGFloat = 0
+        /// An observable angle to apply to photos or videos it captures with the device so that they’re level relative to gravity.
+        internal(set) public var captureRotationAngle: CGFloat = 0
+        
+        /// An observable boolean value indicates whether the preview layer is dimming.
+        internal(set) public var previewDimming = false
+        /// An observable boolean value indicates whether the system is busy processing captured photo.
+        internal(set) public var isBusyProcessing = false
+        /// An observable boolean value indicates whether the shutter is disabled for some reason.
+        internal(set) public var shutterDisabled = false
+        
+        /// Requested photo capture options.
+        ///
+        /// > Tip:
+        /// > You can update this value via ``setPhotoCaptureOptions(_:)``.
+        /// >
+        /// > Note that updating this vlaue after running the session will trigger a session re-configuration if the option updates.
+        ///
+        /// - SeeAlso: ``setPhotoCaptureOptions(_:)``
+        internal(set) public var photoCaptureOptions: RequestedPhotoCaptureOptions = []
+        /// An observable integer value indicates how many live photo capturing is in progress.
+        internal(set) public var inProgressLivePhotoCount = 0
+        
+        /// An observable value indicates flash state of current capture device for the capturing.
+        public var flash = CameraFlash(
+            deviceEligible: false, // this will be updated during session setup
+            userSelectedMode: .off,
+            isFlashRecommendedByScene: false
+        )
+        
+        /// An observable boolean value indicates whether the focus is locked by user (via long press).
+        ///
+        /// - SeeAlso: ``CameraViewFinder``
+        internal(set) public var focusLocked = false
+        
+        #if os(iOS)
+        /// A value that controls the cropping and enlargement of images based on current device factor.
+        public var zoomFactor: CGFloat = 1.0 {
+            didSet {
+                guard oldValue != self.zoomFactor else { return }
+                
+                Task { @CameraActor [zoomFactor] in
+                    camera.coordinator.isSettingZoomFactor = true
+                    defer { camera.coordinator.isSettingZoomFactor = false }
+                    
+                    camera.coordinator.withCurrentCaptureDevice { device in
+                        device.videoZoomFactor = zoomFactor
+                    }
+                }
             }
         }
+        #else
+        /// A value indicating the zoom factor of current capture device.
+        ///
+        /// On macOS, this value is always set to `1.0`.
+        public let zoomFactor: CGFloat = 1.0
+        #endif
+        /// The zoom factor multiplier when displaying zoom information on a user interface.
+        ///
+        /// This maps the `1.0` value of `zoomFactor` to the display value on user interfaces.
+        ///
+        /// For example, the wide-angle camera may report a `zoomFactor` of `2.0` when your app uses iOS fusion camera.
+        /// You can transform the value from device zoom factor to the displaying zoom factor and vice versa.
+        ///
+        /// - SeeAlso: ``displayZoomFactor``
+        internal(set) public var displayZoomFactorMultiplier: CGFloat = 1.0
+        /// A value to display zoom information in a user interface.
+        ///
+        /// This value represents the effective zoom relative to the base (wide-angle) camera, making it suitable for display in the user interface.
+        public var displayZoomFactor: CGFloat {
+            zoomFactor * displayZoomFactorMultiplier
+        }
     }
-    /// The zoom factor of the base camera (typically the wide-angle / “1x” camera).
-    ///
-    /// - SeeAlso: ``displayZoomFactor``
-    internal(set) public var baseZoomFactor: CGFloat = 1.0
-    /// A zoom factor normalized for on-screen presentation.
-    ///
-    /// This value represents the effective zoom relative to the base (wide-angle) camera, making it suitable for display in the user interface.
-    public var displayZoomFactor: CGFloat {
-        zoomFactor / baseZoomFactor
+
+    public var state: State
+    public subscript<T>(dynamicMember keyPath: ReferenceWritableKeyPath<State, T>) -> T {
+        get { state[keyPath: keyPath] }
+        set { state[keyPath: keyPath] = newValue }
     }
-    #endif
+    public subscript<T>(dynamicMember keyPath: KeyPath<State, T>) -> T {
+        state[keyPath: keyPath]
+    }
     
     @available(macOS, unavailable)
     func setManualFocus(
@@ -163,26 +203,28 @@ public final class Camera: SendableMetatype, Logging {
         focusMode: AVCaptureDevice.FocusMode,
         exposureMode: AVCaptureDevice.ExposureMode
     ) {
-        coordinator.withCurrentCaptureDevice { device in
-            guard device.isFocusPointOfInterestSupported,
-                  device.isExposurePointOfInterestSupported else {
-                self.logger.warning("Current device doesn't support focusing or exposing point of interst.")
-                return
+        Task { @CameraActor in
+            coordinator.withCurrentCaptureDevice { device in
+                guard device.isFocusPointOfInterestSupported,
+                      device.isExposurePointOfInterestSupported else {
+                    self.logger.warning("Current device doesn't support focusing or exposing point of interst.")
+                    return
+                }
+                device.focusPointOfInterest = pointOfInterst
+                if device.isFocusModeSupported(focusMode) {
+                    device.focusMode = focusMode
+                }
+                
+                device.setExposureTargetBias(Float.zero)
+                device.exposurePointOfInterest = pointOfInterst
+                if device.isExposureModeSupported(exposureMode) {
+                    device.exposureMode = exposureMode
+                }
+                
+                let locked = focusMode == .locked || exposureMode == .locked
+                // Enable `SubjectAreaChangeMonitoring` to reset focus at appropriate time
+                device.isSubjectAreaChangeMonitoringEnabled = !locked
             }
-            device.focusPointOfInterest = pointOfInterst
-            if device.isFocusModeSupported(focusMode) {
-                device.focusMode = focusMode
-            }
-            
-            device.setExposureTargetBias(Float.zero)
-            device.exposurePointOfInterest = pointOfInterst
-            if device.isExposureModeSupported(exposureMode) {
-                device.exposureMode = exposureMode
-            }
-            
-            let locked = focusMode == .locked || exposureMode == .locked
-            // Enable `SubjectAreaChangeMonitoring` to reset focus at appropriate time
-            device.isSubjectAreaChangeMonitoringEnabled = !locked
         }
     }
     

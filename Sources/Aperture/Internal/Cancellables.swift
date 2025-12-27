@@ -45,11 +45,12 @@ public struct Cancellables: Equatable, Sendable {
         nonmutating set { _storage.cancellables = newValue }
     }
     
-    public var projectedValue: Self {
+    nonisolated public var projectedValue: Self {
         self
     }
     
     public func cancelAll() {
         _storage.cancellables.forEach { $0.cancel() }
+        _storage.cancellables = []
     }
 }

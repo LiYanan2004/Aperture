@@ -109,6 +109,8 @@ final class CameraCoordinator: NSObject, Logging {
     }
     
     private func configureSessionInput(device: AVCaptureDevice) {
+        $zoomInformationObservers.cancelAll()
+        
         do {
             if let activeCameraInput {
                 captureSession.removeInput(activeCameraInput)
@@ -120,7 +122,22 @@ final class CameraCoordinator: NSObject, Logging {
             }
         }
         
-        updateDeviceSwitchOverZoomFactor(device: device)
+        let displayZoomFactorMultiplier: CGFloat
+        if #available(iOS 18.0, macOS 14.0, *) {
+            displayZoomFactorMultiplier = observeDisplayZoomFactorMultiplier()
+        } else {
+            let wideAngleCameraZoomFactor = self.wideAngleCameraZoomFactor
+            displayZoomFactorMultiplier = wideAngleCameraZoomFactor
+            updateCamera { camera in
+                camera.displayZoomFactorMultiplier = 1 / wideAngleCameraZoomFactor
+            }
+        }
+        #if os(iOS)
+        withCurrentCaptureDevice { device in
+            device.videoZoomFactor = 1 / displayZoomFactorMultiplier
+        }
+        observeDeviceZoomFactor()
+        #endif
         
         let deviceHasFlash = self.cameraInputDevice.hasFlash
         updateCamera { camera in
@@ -216,35 +233,63 @@ final class CameraCoordinator: NSObject, Logging {
         return deviceInput
     }
     
-    private func updateDeviceSwitchOverZoomFactor(device: AVCaptureDevice) {
-#if os(iOS)
-        var switchOverZoomFactor: CGFloat = 1
-        defer {
-            withCurrentCaptureDevice { device in
-                device.videoZoomFactor = switchOverZoomFactor
-            }
-            
-            updateCamera { camera in
-                camera.baseZoomFactor = switchOverZoomFactor
-                camera.zoomFactor = switchOverZoomFactor
+    @discardableResult
+    @available(iOS 18.0, macOS 14.0, *)
+    private func observeDisplayZoomFactorMultiplier() -> CGFloat {
+        withValueObservation(
+            of: cameraInputDevice,
+            keyPath: \.displayVideoZoomFactorMultiplier,
+            cancellables: &zoomInformationObservers
+        ) { [weak self] displayVideoZoomFactorMultiplier in
+            self?.updateCamera { camera in
+                camera.displayZoomFactorMultiplier = displayVideoZoomFactorMultiplier
             }
         }
         
+        return cameraInputDevice.displayVideoZoomFactorMultiplier
+    }
+    #if os(iOS)
+    /// A boolean value indicating whether the capture device is setting its zoom factor.
+    package var isSettingZoomFactor = false
+    private func observeDeviceZoomFactor() {
+        withValueObservation(
+            of: cameraInputDevice,
+            keyPath: \.videoZoomFactor,
+            cancellables: &zoomInformationObservers
+        ) { [weak self] videoZoomFactor in
+            guard let self else { return }
+            guard !self.isSettingZoomFactor else { return }
+            self.updateCamera { @MainActor camera in
+                camera.zoomFactor = videoZoomFactor
+            }
+        }
+    }
+    #endif
+    @Cancellables private var zoomInformationObservers
+    
+    private var wideAngleCameraZoomFactor: CGFloat {
+        var switchOverZoomFactor: CGFloat = 1
+        
+        guard let device = self.cameraInputDevice else { return switchOverZoomFactor }
+        
+        #if os(iOS)
         let wideAngleCameraOffset = device.constituentDevices
             .enumerated()
             .first(where: { $0.element.deviceType == .builtInWideAngleCamera })?
             .offset
-        guard let wideAngleCameraOffset else { return }
+        guard let wideAngleCameraOffset else { return switchOverZoomFactor }
         
         // "These factors progress in the same order as the devices listed in that property." -- documentation
         // Since switchOverVideoZoomFactor count is N - 1 (where N == constituentDevices.count), shift left by one to remove 1.0x
         let switchOverZoomFactorOffset = wideAngleCameraOffset - /* 1.0x */ 1
-        guard switchOverZoomFactorOffset >= 0 else { return }
+        guard switchOverZoomFactorOffset >= 0 else { return switchOverZoomFactor }
         
         switchOverZoomFactor = CGFloat(
             truncating: device.virtualDeviceSwitchOverVideoZoomFactors[switchOverZoomFactorOffset]
         )
-#endif
+        #endif
+        
+        return switchOverZoomFactor
     }
     
     // MARK: - Output
@@ -294,18 +339,18 @@ final class CameraCoordinator: NSObject, Logging {
     // MARK: - Rotation Coordinator
     
     /// A set of observers that observe the properties of `rotationCoordinator`.
-    nonisolated(unsafe) private var rotationObservers: Set<AnyCancellable> = []
+    @Cancellables private var rotationObservers
     /// A rotation coordinator that monitors physical orientation to ensure the level of preview and captured content is relative to gravity.
     nonisolated(unsafe) private var rotationCoordinator: AVCaptureDevice.RotationCoordinator?
     
     nonisolated private func observeRotationCoordinator() {
         guard let rotationCoordinator else { return }
-        rotationObservers.removeAll()
+        $rotationObservers.cancelAll()
         
         withValueObservation(
             of: rotationCoordinator,
             keyPath: \.videoRotationAngleForHorizonLevelCapture,
-            cancellables: &rotationObservers
+            cancellables: &$rotationObservers.wrappedValue // Swift does not support `nonisolated(unsafe)` directly on properties with property wrappers
         ) { [weak self] angle in
             Task { @CameraActor in
                 guard let self else { return }
@@ -321,28 +366,26 @@ final class CameraCoordinator: NSObject, Logging {
         withValueObservation(
             of: rotationCoordinator,
             keyPath: \.videoRotationAngleForHorizonLevelPreview,
-            cancellables: &rotationObservers
+            cancellables: &$rotationObservers.wrappedValue // Swift does not support `nonisolated(unsafe)` directly on properties with property wrappers
         ) { [weak self] angle in
-            self?.updateCamera { camera in
+            self?.updateCamera { @MainActor camera in
                 camera.previewRotationAngle = angle
                 self?.cameraPreview.preview.videoPreviewLayer.connection?.videoRotationAngle = angle
             }
         }
     }
     
-    nonisolated public func withCurrentCaptureDevice(
+    public func withCurrentCaptureDevice(
         perform action: @escaping (AVCaptureDevice) throws -> Void
     ) {
-        Task {
-            guard let cameraInputDevice = await cameraInputDevice else { return }
-            do {
-                try cameraInputDevice.lockForConfiguration()
-                defer { cameraInputDevice.unlockForConfiguration() }
-                
-                try action(cameraInputDevice)
-            } catch {
-                logger.error("Cannot lock device for configuration: \(error.localizedDescription)")
-            }
+        guard let cameraInputDevice else { return }
+        do {
+            try cameraInputDevice.lockForConfiguration()
+            defer { cameraInputDevice.unlockForConfiguration() }
+            
+            try action(cameraInputDevice)
+        } catch {
+            logger.error("Cannot lock device for configuration: \(error.localizedDescription)")
         }
     }
 }
@@ -351,7 +394,7 @@ final class CameraCoordinator: NSObject, Logging {
 
 extension CameraCoordinator {
     nonisolated private func updateCamera(
-        perform action: @escaping @MainActor (Camera) async -> Void
+        perform action: @escaping (Camera) async -> Void
     ) {
         Task { @MainActor [weak self] in
             guard let self else { return }
@@ -366,9 +409,9 @@ extension CameraCoordinator {
             
             switch (currentState, isConfiguring) {
                 case (.running, true):
-                    self.camera?.captureSessionState = .configuring
+                    camera.captureSessionState = .configuring
                 case (.configuring, false):
-                    self.camera?.captureSessionState = await self.captureSession.isRunning ? .running : .idle
+                    camera.captureSessionState = await self.captureSession.isRunning ? .running : .idle
                 default:
                     break
             }
