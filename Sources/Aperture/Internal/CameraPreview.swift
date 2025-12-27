@@ -108,8 +108,11 @@ extension CameraPreview {
         }
         
         override func layout() {
-            super.layout()
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
             videoPreviewLayer.frame = bounds
+            super.layout()
+            CATransaction.commit()
         }
         #elseif os(iOS)
         override init(frame: CGRect) {
@@ -123,8 +126,11 @@ extension CameraPreview {
         }
 
         override func layoutSubviews() {
-            super.layoutSubviews()
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
             videoPreviewLayer.frame = bounds
+            super.layoutSubviews()
+            CATransaction.commit()
         }
         #endif
         
