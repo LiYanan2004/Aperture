@@ -7,11 +7,14 @@
 
 import Foundation
 
-struct AnyEquatable: Equatable {
-    var base: Any
+@_spi(Internal)
+public struct AnyEquatable: Equatable {
+    public var base: Any
+    @usableFromInline
     var _isEqualTo: (_ x: Any, _ y: Any) -> Bool
     
-    init<E: Equatable>(_ base: E) {
+    @_spi(Internal)
+    public init<E: Equatable>(_ base: E) {
         if let base = base as? AnyEquatable {
             self = base
         } else {
@@ -32,13 +35,14 @@ struct AnyEquatable: Equatable {
     }
     
     @_transparent
-    static func == (lhs: Self, rhs: Self) -> Bool {
+    public static func == (lhs: Self, rhs: Self) -> Bool {
         lhs._isEqualTo(lhs.base, rhs.base)
     }
 }
 
 extension Equatable {
-    func eraseToAnyEquatable() -> AnyEquatable {
+    @_spi(Internal)
+    public func eraseToAnyEquatable() -> AnyEquatable {
         AnyEquatable(self)
     }
 }

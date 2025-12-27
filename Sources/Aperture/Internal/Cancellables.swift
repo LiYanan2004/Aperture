@@ -8,8 +8,9 @@
 import Foundation
 import Combine
 
+@_spi(Internal)
 @propertyWrapper
-struct Cancellables: Equatable, Sendable {
+public struct Cancellables: Equatable, Sendable {
     private final class _Storage: Equatable, @unchecked /* NSLock */ Sendable {
         private let lock = NSLock()
         private var _cancellables: Set<AnyCancellable> = []
@@ -34,20 +35,21 @@ struct Cancellables: Equatable, Sendable {
     
     private let _storage: _Storage = .init()
     
-    init(wrappedValue: Set<AnyCancellable> = []) {
+    @_spi(Internal)
+    public init(wrappedValue: Set<AnyCancellable> = []) {
         self.wrappedValue = wrappedValue
     }
     
-    var wrappedValue: Set<AnyCancellable> {
+    public var wrappedValue: Set<AnyCancellable> {
         get { _storage.cancellables }
         nonmutating set { _storage.cancellables = newValue }
     }
     
-    var projectedValue: Self {
+    public var projectedValue: Self {
         self
     }
     
-    func cancelAll() {
+    public func cancelAll() {
         _storage.cancellables.forEach { $0.cancel() }
     }
 }

@@ -22,7 +22,7 @@ nonisolated struct _EnsureLayoutViewModifier: ViewModifier {
 }
 
 extension SwiftUI.View {
-    @_spi(Intenal)
+    @_spi(Internal)
     nonisolated public func ensureLayout(alignment: Alignment = .center) -> some View {
         modifier(_EnsureLayoutViewModifier(alignment: alignment))
     }

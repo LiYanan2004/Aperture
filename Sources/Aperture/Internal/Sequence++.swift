@@ -8,7 +8,8 @@
 import Foundation
 
 extension Sequence {
-    func first<T>(
+    @_spi(Internal)
+    public func first<T>(
         byUnwrapping transform: @escaping (Element) throws -> T?
     ) rethrows -> T? {
         try self.lazy.compactMap(transform).first
