@@ -18,10 +18,7 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "Aperture",
-            exclude: [
-                "Legacy/" // should be removed after refactoring
-            ]
+            name: "Aperture"
         ),
     ]
 )
