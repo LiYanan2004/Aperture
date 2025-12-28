@@ -34,12 +34,9 @@ public struct CameraFlipButton<Label: View>: View {
 
     public var body: some View {
         Button {
-            guard let builtInCamera = camera.device as? BuiltInCamera else { return }
+            guard let builtInCamera = camera.device as? any BuiltInCamera else { return }
             let newPosition = builtInCamera.position.flipped
-            camera.device = .builtInCamera(
-                position: newPosition,
-                usesFusionCamera: true
-            )
+            camera.device = AutomaticCamera(position: newPosition)
             self.position = newPosition
         } label: {
             label

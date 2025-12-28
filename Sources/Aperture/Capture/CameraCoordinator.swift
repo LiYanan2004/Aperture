@@ -62,6 +62,8 @@ final class CameraCoordinator: NSObject, Logging {
             captureSession.sessionPreset = profile.sessionPreset
         }
         
+        captureSession.isMultitaskingCameraAccessEnabled = captureSession.isMultitaskingCameraAccessSupported
+        
         guard let inputDevice = cameraInputDevice else { throw CameraError.invalidCaptureDevice }
         
         configureSessionInput(device: inputDevice)
@@ -141,9 +143,8 @@ final class CameraCoordinator: NSObject, Logging {
         observeDeviceZoomFactor()
         #endif
         
-        let deviceHasFlash = self.cameraInputDevice.hasFlash
         updateCamera { camera in
-            camera.flash.deviceEligible = deviceHasFlash
+            camera.flash.deviceEligible = device.hasFlash
         }
     }
     

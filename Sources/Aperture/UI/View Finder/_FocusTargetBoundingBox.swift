@@ -274,7 +274,7 @@ extension _FocusTargetBoundingBox {
 #if os(iOS)
 #Preview {
     _FocusTargetBoundingBox(
-        camera: Camera(device: .builtInCamera(), profile: .photo),
+        camera: Camera(device: .automatic, profile: .photo),
         focusMode: .manualFocusLocking
     )
     .frame(width: 100, height: 100)

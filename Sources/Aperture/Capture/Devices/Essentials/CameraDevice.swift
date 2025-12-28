@@ -14,6 +14,10 @@ public protocol CameraDevice: Identifiable, Equatable {
     var captureDevice: AVCaptureDevice? { get }
 }
 
+public protocol BuiltInCamera: CameraDevice {
+    var position: CameraPosition { get }
+}
+
 extension CameraDevice {
     public subscript<T>(dynamicMember keyPath: KeyPath<AVCaptureDevice?, T>) -> T {
         captureDevice[keyPath: keyPath]
@@ -32,15 +36,27 @@ extension CameraDevice {
 
 // MARK: - AnyCameraDevice
 
-public struct AnyCameraDevice: CameraDevice {
-    public let captureDevice: AVCaptureDevice?
+public struct AnyCameraDevice {
+    public let base: any CameraDevice
     
     public init<C: CameraDevice>(_ camera: C) {
-        self.captureDevice = camera.captureDevice
+        if let base = camera as? AnyCameraDevice {
+            self = base
+        } else {
+            self.base = camera
+        }
     }
     
     @inlinable
     public init<T: CameraDevice>(erasing camera: T) {
         self.init(camera)
+    }
+}
+
+extension AnyCameraDevice: CameraDevice {
+    public var captureDevice: AVCaptureDevice? { base.captureDevice }
+    
+    public static func == (lhs: AnyCameraDevice, rhs: AnyCameraDevice) -> Bool {
+        lhs.eraseToAnyEquatable() == rhs.eraseToAnyEquatable()
     }
 }
