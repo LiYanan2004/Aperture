@@ -7,6 +7,8 @@
 
 import Foundation
 
+/// A value describes the error occurred during capture.
+@_documentation(visibility: internal)
 public enum CaptureError: LocalizedError {
     case photoOutputServiceNotAvailable
     case movieOutputServiceNotAvailable
@@ -24,6 +26,8 @@ public enum CaptureError: LocalizedError {
     }
 }
 
+/// A value describes a general camera error.
+@_documentation(visibility: internal)
 public enum CameraError: LocalizedError {
     case invalidCaptureDevice
     case permissionDenied

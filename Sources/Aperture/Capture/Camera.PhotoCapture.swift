@@ -14,11 +14,11 @@ extension Camera {
         let context = await coordinator.outputContext(for: PhotoCaptureService.self)
         guard let context else { throw CaptureError.noContext }
         
-        let photoOutput = await coordinator.activeOutputs.first(byUnwrapping: { $0 as? AVCapturePhotoOutput })
+        let photoOutput = await coordinator.captureOutput(of: PhotoCaptureService.self)
         let service = profile.photoCaptureService
         guard let photoOutput, let service else { throw CaptureError.photoOutputServiceNotAvailable }
         
-        let photoSettings = try await service.photoSettings(
+        let photoSettings = try await service.createPhotoSettings(
             output: photoOutput,
             configuration: configuration,
             context: context
@@ -62,3 +62,22 @@ extension Camera {
         return try await action()
     }
 }
+
+// MARK: - Delegate
+
+final class PhotoReadinessCoordinatorDelegate: NSObject, AVCapturePhotoOutputReadinessCoordinatorDelegate {
+    unowned var camera: Camera
+    
+    init(camera: Camera) {
+        self.camera = camera
+    }
+    
+    func readinessCoordinator(
+        _ coordinator: AVCapturePhotoOutputReadinessCoordinator,
+        captureReadinessDidChange captureReadiness: AVCapturePhotoOutput.CaptureReadiness
+    ) {
+        camera.shutterDisabled = captureReadiness != .ready
+        camera.isBusyProcessing = captureReadiness == .notReadyWaitingForProcessing
+    }
+}
+

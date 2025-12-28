@@ -54,7 +54,7 @@ extension CameraZoomButton where Label == Text {
 
 @available(macOS, unavailable)
 #Preview {
-    let camera = Camera(device: .rearCamera, profile: .photo)
+    let camera = Camera(device: .rearCamera, profile: .photo())
     let zoomFactors = [1.0] + [2.0, 10.0] /* (camera.device.captureDevice?
         .virtualDeviceSwitchOverVideoZoomFactors
         .compactMap({ $0 as? CGFloat }) ?? []) */

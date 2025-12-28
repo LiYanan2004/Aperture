@@ -1,5 +1,5 @@
 //
-//  PhotoCapture.swift
+//  PhotoCaptureService.swift
 //  Aperture
 //
 //  Created by Yanan Li on 2025/12/21.
@@ -10,16 +10,20 @@ import Foundation
 import Combine
 import OSLog
 
+/// An output service that outputs photo data, including Live Photo.
 public struct PhotoCaptureService: OutputService, Logging {
+    /// A photo settings specifically configured for scene monitoring.
+    ///
+    /// This is NOT used when capturing a photo. It's only using for scene monitoring.
     public let sceneMonitoringPhotoSettings = AVCapturePhotoSettings()
     @Cancellables private var flashSceneObservers: Set<AnyCancellable>
     
-    public var captureOptions: RequestedPhotoCaptureOptions = []
+    /// The option set that is used to configure the output.
+    public var options: PhotoCaptureOptions
     
-    public init(
-        captureOptions: RequestedPhotoCaptureOptions = []
-    ) {
-        self.captureOptions = captureOptions
+    /// Create an output service that takes photo from connected session.
+    public init(options: PhotoCaptureOptions = .default) {
+        self.options = options
     }
     
     public func makeCoordinator() -> Coordinator {
@@ -50,21 +54,21 @@ public struct PhotoCaptureService: OutputService, Logging {
         #if os(iOS)
         output.isLivePhotoCaptureEnabled = output.isLivePhotoCaptureSupported
         if output.isAutoDeferredPhotoDeliverySupported {
-            output.isAutoDeferredPhotoDeliveryEnabled = captureOptions.contains(.autoDeferredPhotoDelivery)
+            output.isAutoDeferredPhotoDeliveryEnabled = options.contains(.autoDeferredPhotoDelivery)
         }
         #endif
         if output.isZeroShutterLagSupported {
-            output.isZeroShutterLagEnabled = captureOptions.contains(.zeroShutterLag)
+            output.isZeroShutterLagEnabled = options.contains(.zeroShutterLag)
         }
         if output.isResponsiveCaptureSupported {
-            output.isResponsiveCaptureEnabled = captureOptions.contains(.responsiveCapture)
+            output.isResponsiveCaptureEnabled = options.contains(.responsiveCapture)
             if output.isFastCapturePrioritizationSupported {
-                output.isFastCapturePrioritizationEnabled = captureOptions.contains(.fastCapturePrioritization)
+                output.isFastCapturePrioritizationEnabled = options.contains(.fastCapturePrioritization)
             }
         }
         if #available(iOS 18.0, macOS 15.0, tvOS 18.0, macCatalyst 18.0, *) {
             if output.isConstantColorSupported {
-                output.isConstantColorEnabled = captureOptions.contains(.constantColor)
+                output.isConstantColorEnabled = options.contains(.constantColor)
             }
         }
         
@@ -93,24 +97,31 @@ public struct PhotoCaptureService: OutputService, Logging {
 }
 
 extension PhotoCaptureService {
-    internal func photoSettings(
+    internal func createPhotoSettings(
         output: Output,
         configuration: PhotoCaptureConfiguration,
         context: Context
     ) async throws -> AVCapturePhotoSettings {
-        let photoSettings = AVCapturePhotoSettings()
-        
-        let dimensions = if let minimumPixelCount = configuration.resolution._minimumPixelCount {
-            context.inputDevice.activeFormat
-                .supportedMaxPhotoDimensions
-                .first(where: {
-                    $0.width * $0.height > minimumPixelCount
-                })
+        let photoSettings = if output.availablePhotoCodecTypes.contains(.hevc) {
+            // Capture photos in HEIF format when the device supports it.
+            AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.hevc])
         } else {
-            context.inputDevice.activeFormat.supportedMaxPhotoDimensions.last
+            AVCapturePhotoSettings()
         }
-        guard let dimensions else {
-            throw CameraError.unsatisfiablePhotoCaptureConfiguration(key: \.resolution)
+        
+        var dimensions: CMVideoDimensions! = context.inputDevice.activeFormat
+            .supportedMaxPhotoDimensions
+            .first(where: {
+                $0.width * $0.height > configuration.preferredResolution._minimumPixelCount
+            })
+        if dimensions == nil {
+            let maximumSupportedPhotoDimensions = context.inputDevice
+                .activeFormat
+                .supportedMaxPhotoDimensions.last
+            precondition(maximumSupportedPhotoDimensions != nil, "Video device must support at least one max photo dimensions.")
+            
+            logger.warning("Current capture device does not support \(configuration.preferredResolution.description). Fall back to the maximum dimensions supported by the device: \(maximumSupportedPhotoDimensions!.width)x\(maximumSupportedPhotoDimensions!.height)")
+            dimensions = maximumSupportedPhotoDimensions!
         }
         
         photoSettings.maxPhotoDimensions = dimensions
@@ -126,7 +137,7 @@ extension PhotoCaptureService {
         
         @available(iOS 18.0, macOS 15.0, tvOS 18.0, macCatalyst 18.0, *)
         func _enableConstantColorIfRequestedAndEligible() {
-            guard captureOptions.contains(.constantColor) else { return }
+            guard options.contains(.constantColor) else { return }
             guard output.isConstantColorSupported else {
                 logger.error("[Constant Color] Current device doesn't support constant color.")
                 return

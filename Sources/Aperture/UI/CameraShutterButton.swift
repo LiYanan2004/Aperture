@@ -12,13 +12,14 @@ import SwiftUI
 @available(visionOS, unavailable)
 @available(iOS 17.0, macOS 14.0, tvOS 17.0, *)
 public struct CameraShutterButton: View {
-    var camera: Camera
-    var configuration: PhotoCaptureConfiguration
-    var action: (CapturedPhoto) -> Void
+    public var camera: Camera
+    public var configuration: PhotoCaptureConfiguration
+    public var action: (CapturedPhoto) -> Void
     
     /// Create a shutter button for photo capturing.
+    /// - Parameter camera: The camera view model.
+    /// - Parameter configuration: The configuration for photo capturing.
     /// - parameter action: The action to perform when captured photo arrives.
-    /// - note: This view must be installed inside a ``Camera``.
     public init(
         camera: Camera,
         configuration: PhotoCaptureConfiguration = .init(),
@@ -125,7 +126,7 @@ extension CameraShutterButton {
     CameraShutterButton(
         camera: Camera(
             device: .automatic,
-            profile: .photo
+            profile: .photo()
         )
     ) { photo in
         // Process captured photo here.

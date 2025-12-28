@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+/// A namespace for camera overlay elements.
 public struct CameraOverlayElement {
     
 }

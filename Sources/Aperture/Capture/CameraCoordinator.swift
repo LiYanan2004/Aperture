@@ -12,7 +12,8 @@ import SwiftUI
 
 /// A camera coordinator responsible for managing shared camera infrastructure, including capture session, device input, capture output and more.
 @CameraActor
-final class CameraCoordinator: NSObject, Logging {
+@_spi(Internal)
+public final class CameraCoordinator: NSObject, Logging {
     /// The ``Camera`` instance.
     @MainActor weak var camera: Camera!
     /// The capture preview.
@@ -35,7 +36,8 @@ final class CameraCoordinator: NSObject, Logging {
     // MARK: - Session
     
     /// The capture session.
-    internal let captureSession = AVCaptureSession()
+    @_spi(Internal)
+    public let captureSession = AVCaptureSession()
     /// The active capture profile applied to the underlying `AVCaptureSession`.
     ///
     /// - note: Update this value would trigger a session re-configuration.
@@ -62,7 +64,9 @@ final class CameraCoordinator: NSObject, Logging {
             captureSession.sessionPreset = profile.sessionPreset
         }
         
+        #if os(iOS)
         captureSession.isMultitaskingCameraAccessEnabled = captureSession.isMultitaskingCameraAccessSupported
+        #endif
         
         guard let inputDevice = cameraInputDevice else { throw CameraError.invalidCaptureDevice }
         
@@ -210,9 +214,11 @@ final class CameraCoordinator: NSObject, Logging {
     // MARK: - Input
     
     /// The active camera device input used by the session.
-    var activeCameraInput: AVCaptureDeviceInput?
+    @_spi(Internal)
+    public var activeCameraInput: AVCaptureDeviceInput?
     /// The active capture device used by the session.
-    var cameraInputDevice: AVCaptureDevice! {
+    @_spi(Internal)
+    public var cameraInputDevice: AVCaptureDevice! {
         didSet {
             guard let cameraInputDevice, activeCameraInput != nil else { return }
             
@@ -253,7 +259,8 @@ final class CameraCoordinator: NSObject, Logging {
     }
     #if os(iOS)
     /// A boolean value indicating whether the capture device is setting its zoom factor.
-    package var isSettingZoomFactor = false
+    @_spi(Internal)
+    public var isSettingZoomFactor = false
     private func observeDeviceZoomFactor() {
         withValueObservation(
             of: cameraInputDevice,
@@ -298,9 +305,8 @@ final class CameraCoordinator: NSObject, Logging {
     // MARK: - Output
     
     /// The active camera device input used by the session.
-    var activeOutputs: [AVCaptureOutput] = []
-    
-    var outputServiceCoordinators: [Any] = []
+    private var activeOutputs: [AVCaptureOutput] = []
+    private var outputServiceCoordinators: [Any] = []
     
     /// Adds the capture output to the pipeline if possible.
     private func addOutput(_ output: AVCaptureOutput) throws(CameraError) {
@@ -311,8 +317,15 @@ final class CameraCoordinator: NSObject, Logging {
         }
     }
     
+    /// Retrieves the created capture output of an output service if it has been created.
+    @_spi(Internal)
+    public func captureOutput<T: OutputService>(of: T.Type) -> T.Output? {
+        activeOutputs.first(byUnwrapping: { $0 as? T.Output })
+    }
+    
     /// Gets current context of the output service.
-    internal func outputContext<T: OutputService>(for: T.Type) -> OutputServiceContext<T>? {
+    @_spi(Internal)
+    public func outputContext<T: OutputService>(for: T.Type) -> OutputServiceContext<T>? {
         guard let activeCameraInput else { return nil }
         
         let coordinator = outputServiceCoordinators.first(byUnwrapping: { $0 as? T.Coordinator })
@@ -378,6 +391,7 @@ final class CameraCoordinator: NSObject, Logging {
         }
     }
     
+    @_spi(Internal)
     public func withCurrentCaptureDevice(
         perform action: @escaping (AVCaptureDevice) throws -> Void
     ) {

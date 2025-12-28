@@ -20,10 +20,12 @@ nonisolated struct _AdoptsProposedSizeViewModifier: ViewModifier {
         ZStack(alignment: alignment) {
             Rectangle()
                 .fill(.clear)
-                .layoutPriority(isEnabled ? 1 : 0)
+                .layoutPriority(isEnabled ? 1 : -1)
             
-            content
-                .layoutPriority(isEnabled ? 0 : 1)
+            ZStack {
+                content
+            }
+            .layoutPriority(isEnabled ? -1 : 1)
         }
     }
 }

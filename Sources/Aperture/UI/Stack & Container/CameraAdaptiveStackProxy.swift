@@ -7,8 +7,11 @@
 
 import SwiftUI
 
+/// A proxy that describes the primary and secondary stack layouts for a camera UI.
 public struct CameraAdaptiveStackProxy {
+    /// A value that describes the main stack configuration used to lay out content.
     public var primaryLayoutStack: StackConfiguration
+    /// A value that describes the accessory stack configuration used to lay out side content.
     public var secondaryLayoutStack: StackConfiguration
     
     internal init(interfaceRotationAngle: CGFloat) {
@@ -41,16 +44,21 @@ public struct CameraAdaptiveStackProxy {
         }
     }
     
+    /// A value describes how to configure the stack.
     public struct StackConfiguration: Sendable {
+        /// A value that selects the stack type used for layout.
         public var stack: Stack
+        /// A value that controls whether children keep their order or are reversed.
         public var order: Order
         
+        /// A value describes which stack to use.
         public enum Stack: Sendable {
             case vstack
             case hstack
             case zstack
         }
         
+        /// A type that describes the direction used to place children in the stack.
         public enum Order: Sendable {
             case normal
             case reversed
@@ -65,14 +73,15 @@ public struct CameraAdaptiveStackProxy {
             }
         }
         
-        public func layout(spacing: CGFloat? = nil) -> AnyLayout {
+        /// Creates an instance of `AnyLayout` that matches this configuration.
+        public func layout(alignment: Alignment = .center, spacing: CGFloat? = nil) -> AnyLayout {
             switch stack {
                 case .vstack:
-                    AnyLayout(VStackLayout(spacing: spacing))
+                    AnyLayout(VStackLayout(alignment: alignment.horizontal, spacing: spacing))
                 case .hstack:
-                    AnyLayout(HStackLayout(spacing: spacing))
+                    AnyLayout(HStackLayout(alignment: alignment.vertical, spacing: spacing))
                 case .zstack:
-                    AnyLayout(ZStackLayout(alignment: .trailing))
+                    AnyLayout(ZStackLayout(alignment: alignment))
             }
         }
     }
@@ -81,11 +90,12 @@ public struct CameraAdaptiveStackProxy {
 // MARK: - Stack
 
 internal struct _CameraStack: _VariadicView_MultiViewRoot {
+    internal var alignment: Alignment
     internal var spacing: CGFloat?
     internal var configuration: CameraAdaptiveStackProxy.StackConfiguration
     
     internal func body(children: _VariadicView.Children) -> some View {
-        let layout = configuration.layout(spacing: spacing)
+        let layout = configuration.layout(alignment: alignment, spacing: spacing)
         
         let children: [_VariadicView.Children.Element] = switch configuration.order {
         case .normal:

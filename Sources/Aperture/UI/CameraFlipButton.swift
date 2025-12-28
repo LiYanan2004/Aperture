@@ -7,15 +7,12 @@
 
 import SwiftUI
 
-/// A button that flips your camera view.
-@available(watchOS, unavailable)
-@available(visionOS, unavailable)
-@available(tvOS, unavailable)
+/// A button that flips built-in capture device between front and rear camera.
 @available(macOS, unavailable)
-@available(macCatalyst, unavailable)
-@available(iOS 17.0, tvOS 17.0, *)
 public struct CameraFlipButton<Label: View>: View {
+    /// The camera view model.
     public var camera: Camera
+    /// The label of flip button.
     @ViewBuilder public var label: Label
     
     @State private var position: CameraPosition?
@@ -45,16 +42,10 @@ public struct CameraFlipButton<Label: View>: View {
     }
 }
 
-@available(watchOS, unavailable)
-@available(visionOS, unavailable)
-@available(tvOS, unavailable)
 @available(macOS, unavailable)
-@available(macCatalyst, unavailable)
-@available(iOS 17.0, tvOS 17.0, *)
+@available(iOS 17.0, *)
 extension CameraFlipButton {
     /// Create a button that switches between rear camera and front camera.
-    /// - parameters:
-    ///     - titleKey: A title generated from a localized string. This is for accessibility.
     public init(
         _ titleKey: LocalizedStringKey,
         systemImage: String,
@@ -65,8 +56,6 @@ extension CameraFlipButton {
     }
     
     /// Create a button that switches between rear camera and front camera.
-    /// - parameters:
-    ///     - titleKey: A title generated from a localized string. This is for accessibility.
     public init(
         _ titleKey: LocalizedStringKey,
         image: String,
@@ -77,8 +66,6 @@ extension CameraFlipButton {
     }
     
     /// Create a button that switches between rear camera and front camera.
-    /// - parameters:
-    ///     - titleKey: A title generated from a localized string. This is for accessibility.
     public init(
         _ titleKey: LocalizedStringKey,
         image: ImageResource,
@@ -89,8 +76,6 @@ extension CameraFlipButton {
     }
     
     /// Create a button that switches between rear camera and front camera.
-    /// - parameters:
-    ///     - title: A string used as the label’s title. This is for accessibility.
     public init(
         _ title: String,
         systemImage: String,
@@ -101,8 +86,6 @@ extension CameraFlipButton {
     }
     
     /// Create a button that switches between rear camera and front camera.
-    /// - parameters:
-    ///     - title: A string used as the label’s title. This is for accessibility.
     public init(
         _ title: String,
         image: String,
@@ -113,8 +96,6 @@ extension CameraFlipButton {
     }
     
     /// Create a button that switches between rear camera and front camera.
-    /// - parameters:
-    ///     - title: A string used as the label’s title. This is for accessibility.
     public init(
         _ title: String,
         image: ImageResource,

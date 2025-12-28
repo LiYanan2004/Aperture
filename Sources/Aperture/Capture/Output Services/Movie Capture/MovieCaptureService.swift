@@ -7,6 +7,7 @@
 
 import AVFoundation
 
+@_spi(Internal)
 public struct MovieCaptureService: OutputService {
     var configuraton: MovieCaptureConfiguration
     

@@ -7,11 +7,15 @@
 
 import SwiftUI
 
+/// A view that dynamically switches layout statck based on device context.
 public struct CameraAdaptiveStack<Content: View>: View {
-    var camera: Camera
-    var spacing: CGFloat?
+    /// The camera view model.
+    public var camera: Camera
+    /// A value indicates the distance between adjacent subviews.
+    public var spacing: CGFloat?
     @ViewBuilder var content: (CameraAdaptiveStackProxy) -> Content
 
+    /// Creates a view that dynamically switches layout statck based on device context.
     public init(
         camera: Camera,
         spacing: CGFloat? = nil,
@@ -31,6 +35,7 @@ public struct CameraAdaptiveStack<Content: View>: View {
         )
         _VariadicView.Tree(
             _CameraStack(
+                alignment: cameraLayoutProxy.primaryLayoutStack.stack == .zstack ? .trailing : .center,
                 spacing: spacing,
                 configuration: cameraLayoutProxy.primaryLayoutStack
             )

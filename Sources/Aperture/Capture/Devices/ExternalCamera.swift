@@ -7,9 +7,9 @@
 
 import AVFoundation
 
+/// An external or continuity camera device.
 public struct ExternalCamera: CameraDevice {
-    public let captureDevice: AVCaptureDevice?
-    
+    /// Creates an external camera device.
     public init() {
         self.captureDevice = AVCaptureDevice.DiscoverySession(
             deviceTypes: Self.supportedDeviceTypes,
@@ -17,6 +17,8 @@ public struct ExternalCamera: CameraDevice {
             position: .unspecified
         ).devices.first
     }
+    
+    public let captureDevice: AVCaptureDevice?
     
     #if os(macOS)
     private static let supportedDeviceTypes = [AVCaptureDevice.DeviceType.external, .continuityCamera, .deskViewCamera]
@@ -26,5 +28,10 @@ public struct ExternalCamera: CameraDevice {
 }
 
 extension CameraDevice where Self == ExternalCamera {
+    /// An external camera device.
+    ///
+    /// On macOS, this could be continuity canera, desk view camera, etc.
+    ///
+    /// On iPadOS, this could be external camera connected via USB-C port.
     public static var external: ExternalCamera { .init() }
 }

@@ -6,16 +6,14 @@
 //
 
 import AVFoundation
-import OSLog
 import SwiftUI
 
-@available(visionOS, unavailable)
-@available(watchOS, unavailable)
 final class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate, Logging {
     private var continuation: CheckedContinuation<CapturedPhoto, Error>
     private unowned var camera: Camera
     
     private var photoData: Data?
+    private var constantColorFallbackPhotoData: Data?
     private var isProxy: Bool = false
     private var livePhotoMovieURL: URL?
     
@@ -46,12 +44,22 @@ final class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate, Loggi
         }
     }
     
-    func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+    func photoOutput(
+        _ output: AVCapturePhotoOutput,
+        didFinishProcessingPhoto photo: AVCapturePhoto,
+        error: Error?
+    ) {
         if let error {
             logger.error("There is an error when finishing processing photo: \(error.localizedDescription)")
         }
         
-        photoData = photo.fileDataRepresentation()
+        let photoData = photo.fileDataRepresentation()
+        if #available(iOS 18.0, macOS 15.0, *),
+           photo.isConstantColorFallbackPhoto {
+            self.constantColorFallbackPhotoData = photoData
+        } else {
+            self.photoData = photoData
+        }
     }
     
     #if os(iOS) && !targetEnvironment(macCatalyst)
@@ -79,7 +87,11 @@ final class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate, Loggi
         livePhotoMovieURL = outputFileURL
     }
 
-    func photoOutput(_ output: AVCapturePhotoOutput, didFinishCapturingDeferredPhotoProxy deferredPhotoProxy: AVCaptureDeferredPhotoProxy?, error: Error?) {
+    func photoOutput(
+        _ output: AVCapturePhotoOutput,
+        didFinishCapturingDeferredPhotoProxy deferredPhotoProxy: AVCaptureDeferredPhotoProxy?,
+        error: Error?
+    ) {
         if let error = error {
             logger.error("There is an error when finishing capturing deferred photo: \(error.localizedDescription)")
             return
@@ -107,6 +119,7 @@ final class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate, Loggi
         continuation.resume(
             returning: CapturedPhoto(
                 data: photoData,
+                constantColorFallbackPhotoData: constantColorFallbackPhotoData,
                 isProxy: isProxy,
                 livePhotoMovieURL: livePhotoMovieURL
             )

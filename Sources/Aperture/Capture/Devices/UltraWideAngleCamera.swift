@@ -7,10 +7,13 @@
 
 import AVFoundation
 
+/// A built-in ultra wide rear camera.
+@available(macOS, unavailable)
 public struct UltraWideAngleCamera: BuiltInCamera {
     public let captureDevice: AVCaptureDevice?
     public let position: CameraPosition = .back
 
+    /// Creates an ultra wide rear camera.
     public init() {
         self.captureDevice = AVCaptureDevice.DiscoverySession(
             deviceTypes: [.builtInUltraWideCamera],
@@ -22,6 +25,7 @@ public struct UltraWideAngleCamera: BuiltInCamera {
 
 @available(macOS, unavailable)
 extension CameraDevice where Self == UltraWideAngleCamera {
+    /// Ultra wide rear camera.
     public static var ultraWideAngleCamera: UltraWideAngleCamera {
         .init()
     }

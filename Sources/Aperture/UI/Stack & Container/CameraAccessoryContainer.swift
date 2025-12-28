@@ -5,18 +5,48 @@
 //  Created by Yanan Li on 2025/12/20.
 //
 
-
 import SwiftUI
 
+/// A container that lays out main content based on current context and overlays the accessories in relatively-fixed edge.
+///
+/// Here is an example of placing ``CameraFlipButton`` and other controls besides ``CameraShutterButton``.
+///
+/// ```swift
+/// CameraAdaptiveStack(camera: camera) { proxy in
+///     CameraViewFinder(camera: camera, videoGravity: .fill)
+///         .ignoresSafeArea()
+///
+///     CameraAccessoryContainer(proxy: proxy, spacing: 0) {
+///         CameraShutterButton(
+///             camera: camera,
+///             action: saveCapturedPhoto
+///         )
+///     } trailingAccessories: {
+///         Button {
+///             captureLivePhoto.toggle()
+///         } label: {
+///             Label("Live Photo", systemImage: "livephoto")
+///         }
+///     }
+/// }
+/// .padding()
+/// ```
 public struct CameraAccessoryContainer<LeadingAccessories: View, Content: View, TrailingAccessories: View>: View {
+    /// A proxy produced by ``CameraAdaptiveStack``.
     public var proxy: CameraAdaptiveStackProxy
+    /// A value for aligning the subviews in this stack on both the x- and y-axes.
     public var alignment: Alignment
+    /// A value indicates the spacing between the main content and accessory area.
     public var spacing: CGFloat?
 
+    /// The view of the main content.
     @ViewBuilder public var content: Content
+    /// A view of the accessories placed on the leading side.
     @ViewBuilder public var leadingAccessories: LeadingAccessories
+    /// A view of the accessories placed on the trailing side.
     @ViewBuilder public var trailingAccessories: TrailingAccessories
 
+    /// Creates an instance that lays out main content based on current context and overlays the accessories in relatively-fixed edge.
     public init(
         proxy: CameraAdaptiveStackProxy,
         alignment: Alignment = .center,
@@ -47,10 +77,10 @@ public struct CameraAccessoryContainer<LeadingAccessories: View, Content: View, 
                 maxWidth: proxy.secondaryLayoutStack.stack == .hstack ? .infinity : nil,
                 maxHeight: proxy.secondaryLayoutStack.stack == .vstack ? .infinity : nil
             )
-            .coordinateSpace(name: accessoryContainer)
-            .overlay(alignment: alignment) {
+            .overlay(alignment: proxy.primaryLayoutStack.stack != .zstack ? .center : .top) {
                 _VariadicView.Tree(
                     _CameraStack(
+                        alignment: alignment,
                         spacing: 0,
                         configuration: proxy.secondaryLayoutStack
                     )
@@ -74,15 +104,10 @@ public struct CameraAccessoryContainer<LeadingAccessories: View, Content: View, 
                             isEnabled: isRegularLayout
                         )
                         .frame(
-                            idealWidth: proxy.secondaryLayoutStack.order == .normal ? topLeftSizeArea.width : nil,
-                            idealHeight: proxy.secondaryLayoutStack.order == .normal ? topLeftSizeArea.height : nil
+                            minWidth: proxy.secondaryLayoutStack.order == .normal ? topLeftSizeArea.width : nil,
+                            minHeight: proxy.secondaryLayoutStack.order == .normal ? topLeftSizeArea.height : nil
                         )
-                        .fixedSize(
-                            horizontal: proxy.secondaryLayoutStack.order == .normal && isRegularLayout,
-                            vertical: proxy.secondaryLayoutStack.order == .normal && isRegularLayout
-                        )
-                    EmptyView()
-                        .adoptsProposedSize(isEnabled: isRegularLayout)
+                    Color.clear
                         .frame(width: mainContentRect?.width, height: mainContentRect?.height)
                         .padding(spacing ?? .zero)
                     trailingAccessories
@@ -91,20 +116,18 @@ public struct CameraAccessoryContainer<LeadingAccessories: View, Content: View, 
                             isEnabled: isRegularLayout
                         )
                         .frame(
-                            idealWidth: proxy.secondaryLayoutStack.order == .reversed ? topLeftSizeArea.width : nil,
-                            idealHeight: proxy.secondaryLayoutStack.order == .reversed ? topLeftSizeArea.height : nil
-                        )
-                        .fixedSize(
-                            horizontal: proxy.secondaryLayoutStack.order == .reversed && isRegularLayout,
-                            vertical: proxy.secondaryLayoutStack.order == .reversed && isRegularLayout
+                            minWidth: proxy.secondaryLayoutStack.order == .reversed ? topLeftSizeArea.width : nil,
+                            minHeight: proxy.secondaryLayoutStack.order == .reversed ? topLeftSizeArea.height : nil
                         )
                 }
             }
+            .coordinateSpace(name: accessoryContainer)
     }
     
     private var mainContent: some View {
         _VariadicView.Tree(
             _CameraStack(
+                alignment: .center,
                 spacing: spacing,
                 configuration: proxy.secondaryLayoutStack
             )
@@ -115,6 +138,7 @@ public struct CameraAccessoryContainer<LeadingAccessories: View, Content: View, 
 }
 
 extension CameraAccessoryContainer where LeadingAccessories == EmptyView {
+    /// Creates an instance that lays out main content based on current context and overlays the accessories in relatively-fixed edge.
     public init(
         proxy: CameraAdaptiveStackProxy,
         alignment: Alignment = .center,
@@ -136,6 +160,7 @@ extension CameraAccessoryContainer where LeadingAccessories == EmptyView {
 }
 
 extension CameraAccessoryContainer where TrailingAccessories == EmptyView {
+    /// Creates an instance that lays out main content based on current context and overlays the accessories in relatively-fixed edge.
     public init(
         proxy: CameraAdaptiveStackProxy,
         alignment: Alignment = .center,

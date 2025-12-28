@@ -8,13 +8,19 @@
 import Foundation
 import AVFoundation
 
+/// A type that provides media output destinations for a capture session.
 public protocol OutputService: Equatable, Sendable {
+    /// The underlying output class.
     associatedtype Output: AVCaptureOutput
+    /// The service's associated coordinator.
     associatedtype Coordinator = Void
     typealias Context = OutputServiceContext<Self>
     
+    /// Creates a custom coordinator to communicate with other data types.
     func makeCoordinator() -> Coordinator
+    /// Creates the output object and configure its initial state.
     func makeOutput(context: Context) -> Output
+    /// Update the output object with the information from context.
     func updateOutput(output: Output, context: Context)
 }
 
@@ -26,11 +32,16 @@ extension OutputService where Coordinator == Void {
 
 // MARK: - Context
 
-public struct OutputServiceContext<Service: OutputService> {    
+/// Contextual information of the camera session and associated device input.
+public struct OutputServiceContext<Service: OutputService> {
+    /// The service associated coordinator.
     public var coordinator: Service.Coordinator
+    /// The capture session.
     public var session: AVCaptureSession
+    /// The device input that is associated to the session.
     public var input: AVCaptureDeviceInput
     
+    /// The connected capture device.
     public var inputDevice: AVCaptureDevice {
         input.device
     }
@@ -38,6 +49,7 @@ public struct OutputServiceContext<Service: OutputService> {
 
 // MARK: - Builder
 
+/// A result builder that combines multiple ``OutputService`` into an array.
 @resultBuilder
 public enum OutputServiceBuilder {
     public static func buildExpression(_ expression: any OutputService) -> [any OutputService] {

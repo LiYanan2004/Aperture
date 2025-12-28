@@ -122,9 +122,14 @@ public final class Camera: SendableMetatype, Logging {
     
     // MARK: - Actions
     
+    /// Sets the focus & exposure point of interest in the coordinate space of the capture device.
+    ///
+    /// - parameter pointOfInterest: The point of interest to fucus & exposure
+    /// - parameter focusMode: The focus mode of the capture device.
+    /// - parameter exposureMode: The exposure mode of the capture device.
     @available(macOS, unavailable)
-    func setManualFocus(
-        pointOfInterst: CGPoint,
+    public func setManualFocus(
+        pointOfInterest: CGPoint,
         focusMode: AVCaptureDevice.FocusMode,
         exposureMode: AVCaptureDevice.ExposureMode
     ) {
@@ -135,13 +140,13 @@ public final class Camera: SendableMetatype, Logging {
                     self.logger.warning("Current device doesn't support focusing or exposing point of interst.")
                     return
                 }
-                device.focusPointOfInterest = pointOfInterst
+                device.focusPointOfInterest = pointOfInterest
                 if device.isFocusModeSupported(focusMode) {
                     device.focusMode = focusMode
                 }
                 
                 device.setExposureTargetBias(Float.zero)
-                device.exposurePointOfInterest = pointOfInterst
+                device.exposurePointOfInterest = pointOfInterest
                 if device.isExposureModeSupported(exposureMode) {
                     device.exposureMode = exposureMode
                 }
@@ -157,7 +162,10 @@ public final class Camera: SendableMetatype, Logging {
 // MARK: - Supplementary
 
 extension Camera {
-    static var isAccessible: Bool {
+    /// A Boolean value indicates whether the video device is accessible.
+    ///
+    /// - Important: If user hasn't determines the permission, a privacy alert pops up.
+    static public var isAccessible: Bool {
         get async {
             await AVCaptureDevice.requestAccess(for: .video)
         }

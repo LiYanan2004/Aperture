@@ -19,9 +19,13 @@ extension Camera {
         
         /// A obvserable value indicates the current state of the session.
         public var captureSessionState: CaptureSessionState = .idle
+        /// A type describes the state of the session.
         public enum CaptureSessionState {
+            /// The session is not running at the moment.
             case idle
+            /// The session is running.
             case running
+            /// The session is under configuring.
             case configuring
         }
 
@@ -39,15 +43,6 @@ extension Camera {
         /// An observable boolean value indicates whether the shutter is disabled for some reason.
         internal(set) public var shutterDisabled = false
         
-        /// Requested photo capture options.
-        ///
-        /// > Tip:
-        /// > You can update this value via ``setPhotoCaptureOptions(_:)``.
-        /// >
-        /// > Note that updating this vlaue after running the session will trigger a session re-configuration if the option updates.
-        ///
-        /// - SeeAlso: ``setPhotoCaptureOptions(_:)``
-        internal(set) public var photoCaptureOptions: RequestedPhotoCaptureOptions = []
         /// An observable integer value indicates how many live photo capturing is in progress.
         internal(set) public var inProgressLivePhotoCount = 0
         
