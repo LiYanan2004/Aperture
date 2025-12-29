@@ -1,4 +1,4 @@
-// swift-tools-version: 5.9
+// swift-tools-version: 5.10
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -8,6 +8,7 @@ let package = Package(
     platforms: [
         .iOS(.v17),
         .macOS(.v14),
+        .macCatalyst(.v14),
     ],
     products: [
         .library(
@@ -16,6 +17,8 @@ let package = Package(
         ),
     ],
     targets: [
-        .target(name: "Aperture"),
+        .target(
+            name: "Aperture"
+        ),
     ]
 )
