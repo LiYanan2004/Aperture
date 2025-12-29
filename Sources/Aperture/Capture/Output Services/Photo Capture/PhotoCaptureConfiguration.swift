@@ -79,8 +79,19 @@ public struct PhotoCaptureConfiguration: Hashable, Sendable {
     /// satisfy the requested resolution, but the final output may differ depending on device
     /// capabilities and capture conditions.
     public enum Resolution: Sendable, Hashable, CustomStringConvertible {
+        /// Prefers `48MP` photo delivery.
+        ///
+        /// Requires hardware support. Fusion camera may not support `48MP` photo delivery.
         case `48mp`
+        /// Prefers `24MP` photo delivery.
+        ///
+        /// Requires ``PhotoCaptureOptions/autoDeferredPhotoDelivery`` and set ``PhotoCaptureConfiguration/qualityPrioritization`` to `.quality`
+        ///
+        /// `24MP` photos will only be delivered via photo proxies, which is automatically determined by the framework.
+        ///
+        /// - SeeAlso: ``PhotoCaptureConfiguration/preferredResolution``
         case `24mp`
+        /// Prefers `12MP` photo delivery.
         case `12mp`
         
         public var description: String {
