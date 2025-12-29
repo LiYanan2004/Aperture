@@ -17,7 +17,7 @@ extension Camera {
             self.camera = camera
         }
         
-        /// A obvserable value indicates the current state of the session.
+        /// A observable value indicates the current state of the session.
         public var captureSessionState: CaptureSessionState = .idle
         /// A type describes the state of the session.
         public enum CaptureSessionState {

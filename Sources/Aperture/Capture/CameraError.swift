@@ -35,7 +35,7 @@ public enum CameraError: LocalizedError {
     case sessionAlreadStarted
     case failedToAddOutput
     case failedToAddInput
-    case failedToUpdateOutputSevice
+    case failedToUpdateOutputService
     
     public var errorDescription: String? {
         switch self {
@@ -51,7 +51,7 @@ public enum CameraError: LocalizedError {
                 "Failed to add the capture input to the session."
             case .failedToAddOutput:
                 "Failed to add the capture output to the session."
-            case .failedToUpdateOutputSevice:
+            case .failedToUpdateOutputService:
                 "Failed to update output service"
         }
     }

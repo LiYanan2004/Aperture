@@ -339,7 +339,7 @@ public final class CameraCoordinator: NSObject, Logging {
             let output = activeOutputs.first(byUnwrapping: { $0 as? S.Output })
             let context = outputContext(for: S.self)
             
-            guard let output, let context else { throw CameraError.failedToUpdateOutputSevice }
+            guard let output, let context else { throw CameraError.failedToUpdateOutputService }
             service.updateOutput(output: output, context: context)
         }
         

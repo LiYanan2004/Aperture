@@ -124,7 +124,7 @@ public final class Camera: SendableMetatype, Logging {
     
     /// Sets the focus & exposure point of interest in the coordinate space of the capture device.
     ///
-    /// - parameter pointOfInterest: The point of interest to fucus & exposure
+    /// - parameter pointOfInterest: The point of interest to focus & exposure
     /// - parameter focusMode: The focus mode of the capture device.
     /// - parameter exposureMode: The exposure mode of the capture device.
     @available(macOS, unavailable)

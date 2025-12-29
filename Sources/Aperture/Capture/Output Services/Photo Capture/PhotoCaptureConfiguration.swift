@@ -73,7 +73,7 @@ public struct PhotoCaptureConfiguration: Hashable, Sendable {
         case jpeg
     }
     
-    /// Rreferred resolution for photo capture.
+    /// Preferred resolution for photo capture.
     ///
     /// This value expresses a **request**, not a guarantee. The capture pipeline will attempt to
     /// satisfy the requested resolution, but the final output may differ depending on device
