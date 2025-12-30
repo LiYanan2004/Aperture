@@ -55,22 +55,43 @@ public struct PhotoCaptureConfiguration: Hashable, Sendable {
         self.qualityPrioritization = qualityPrioritization
     }
     
-    /// A convenience method to configure 24MP photo capture.
-    ///
-    /// For more information on `24MP` photo capturing, please refer to ``preferredResolution``.
-    public func configuredFor24MPPhotoCapture() -> Self {
-        var copy = self
-        copy.preferredResolution = .`24mp`
-        copy.qualityPrioritization = .quality
-        return copy
-    }
-    
     /// Preferred data format for captured photo.
-    public enum DataFormat: Sendable {
+    public enum DataFormat: Sendable, Hashable {
         /// Captures photo in HEIF file format.
         case heif
         /// Captures photo in JPEG file format.
         case jpeg
+        
+        /// Captures Apple ProRAW only without a processed companion image.
+        @available(macOS, unavailable)
+        case appleProRAW
+        /// Captures Apple ProRAW with a HEIF processed companion image.
+        @available(macOS, unavailable)
+        case appleProRAWPlusHEIF
+        /// Captures Apple ProRAW with a JPEG processed companion image.
+        @available(macOS, unavailable)
+        case appleProRAWPlusJPEG
+        
+        /// The corresponding codec type used in an `AVCapturePhotoSettings` object for photo processing.
+        public var codec: AVVideoCodecType? {
+            switch self {
+                case .heif: .hevc
+                case .jpeg: .jpeg
+                case .appleProRAW: nil
+                case .appleProRAWPlusHEIF: .hevc
+                case .appleProRAWPlusJPEG: .jpeg
+            }
+        }
+        
+        @available(macOS, unavailable)
+        var includesAppleProRAW: Bool {
+            switch self {
+                case .heif, .jpeg:
+                    return false
+                case .appleProRAW, .appleProRAWPlusHEIF, .appleProRAWPlusJPEG:
+                    return true
+            }
+        }
     }
     
     /// Preferred resolution for photo capture.
@@ -108,5 +129,17 @@ public struct PhotoCaptureConfiguration: Hashable, Sendable {
                 case .`12mp`: 12_000_000
             }
         }
+    }
+}
+
+extension PhotoCaptureConfiguration {
+    /// A convenience method to configure 24MP photo capture.
+    ///
+    /// For more information on `24MP` photo capturing, please refer to ``preferredResolution``.
+    public func configuredFor24MPPhotoCapture() -> Self {
+        var copy = self
+        copy.preferredResolution = .`24mp`
+        copy.qualityPrioritization = .quality
+        return copy
     }
 }

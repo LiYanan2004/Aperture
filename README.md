@@ -119,6 +119,21 @@ CameraShutterButton(camera: camera, configuration: configuration) { photo in
 let photo = try await camera.takePhoto(configuration: configuration)
 ```
 
+#### Apple ProRAW
+
+Enable ProRAW on the output and opt in per shot.
+
+```swift
+let camera = Camera(device: .automatic, profile: .photo(options: .appleProRAW))
+
+let configuration = PhotoCaptureConfiguration(
+    dataFormat: .appleProRAW
+)
+let photo = try await camera.takePhoto(configuration: configuration)
+```
+
+Use `.appleProRAWPlusHEIF` or `.appleProRAWPlusJPEG` if you want a processed companion image.
+
 ### Custom Output Services
 
 Implement `OutputService` when you need a custom capture output.

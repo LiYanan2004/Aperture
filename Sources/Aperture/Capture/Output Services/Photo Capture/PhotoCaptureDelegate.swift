@@ -11,17 +11,22 @@ import SwiftUI
 final class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate, Logging {
     private var continuation: CheckedContinuation<CapturedPhoto, Error>
     private unowned var camera: Camera
+    /// Optional customizer used to generate the encoded photo data.
+    ///
+    /// - Note: This is only used on iOS where `AVCapturePhotoFileDataRepresentationCustomizer` exists.
+    ///   On macOS the property is accepted for API consistency but is ignored and `fileDataRepresentation()`
+    ///   is used instead.
+    let dataRepresentationCustomizer: (any PhotoFileDataRepresentationCustomizer)?
     
-    private var photoData: Data?
-    private var constantColorFallbackPhotoData: Data?
-    private var isProxy: Bool = false
-    private var livePhotoMovieURL: URL?
+    private var capturedPhoto = CapturedPhoto()
     
     init(
         camera: Camera,
+        dataRepresentationCustomizer: (any PhotoFileDataRepresentationCustomizer)?,
         continuation: CheckedContinuation<CapturedPhoto, Error>
     ) {
         self.camera = camera
+        self.dataRepresentationCustomizer = dataRepresentationCustomizer
         self.continuation = continuation
     }
 
@@ -51,15 +56,38 @@ final class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate, Loggi
     ) {
         if let error {
             logger.error("There is an error when finishing processing photo: \(error.localizedDescription)")
+            return
         }
         
-        let photoData = photo.fileDataRepresentation()
-        if #available(iOS 18.0, macOS 15.0, *),
-           photo.isConstantColorFallbackPhoto {
-            self.constantColorFallbackPhotoData = photoData
+        let photoData: Data?
+        #if os(iOS)
+        photoData = if let dataRepresentationCustomizer {
+            photo.fileDataRepresentation(with: dataRepresentationCustomizer)
         } else {
-            self.photoData = photoData
+            photo.fileDataRepresentation()
         }
+        #else
+        photoData = photo.fileDataRepresentation()
+        #endif
+        
+        guard let photoData else {
+            logger.warning("AVCapturePhoto does not produce any data.")
+            return
+        }
+        
+        var representation: CapturedPhoto.Representation?
+        
+        #if os(iOS)
+        if photo.isRawPhoto {
+            representation = .appleProRAW
+        }
+        #endif
+
+        if #available(iOS 18.0, macOS 15.0, *), photo.isConstantColorFallbackPhoto {
+            representation = .constantColorFallback
+        }
+
+        capturedPhoto.addPhotoData(photoData, for: representation ?? .processed)
     }
     
     #if os(iOS) && !targetEnvironment(macCatalyst)
@@ -84,7 +112,7 @@ final class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate, Loggi
         if let error {
             logger.debug("Error processing Live Photo companion movie: \(String(describing: error))")
         }
-        livePhotoMovieURL = outputFileURL
+        capturedPhoto.livePhotoMovieURL = outputFileURL
     }
 
     func photoOutput(
@@ -92,13 +120,21 @@ final class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate, Loggi
         didFinishCapturingDeferredPhotoProxy deferredPhotoProxy: AVCaptureDeferredPhotoProxy?,
         error: Error?
     ) {
-        if let error = error {
+        if let error {
             logger.error("There is an error when finishing capturing deferred photo: \(error.localizedDescription)")
             return
         }
         
-        photoData = deferredPhotoProxy?.fileDataRepresentation()
-        isProxy = true
+        let proxyData = if let dataRepresentationCustomizer {
+            deferredPhotoProxy?.fileDataRepresentation(with: dataRepresentationCustomizer)
+        } else {
+            deferredPhotoProxy?.fileDataRepresentation()
+        }
+        guard let proxyData else {
+            logger.warning("AVCaptureDeferredPhotoProxy does not produce any data.")
+            return
+        }
+        capturedPhoto.addPhotoData(proxyData, for: .proxy)
     }
     #endif
 
@@ -111,18 +147,13 @@ final class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate, Loggi
             logger.error("There is an error when finishing processing photo: \(error.localizedDescription)")
         }
         
-        guard let photoData else {
+        guard capturedPhoto.isValid else {
             continuation.resume(throwing: PhotoCaptureError.noPhotoData)
             return
         }
         
         continuation.resume(
-            returning: CapturedPhoto(
-                data: photoData,
-                constantColorFallbackPhotoData: constantColorFallbackPhotoData,
-                isProxy: isProxy,
-                livePhotoMovieURL: livePhotoMovieURL
-            )
+            returning: capturedPhoto
         )
     }
 }

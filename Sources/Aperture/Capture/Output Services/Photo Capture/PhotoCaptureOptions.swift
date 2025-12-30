@@ -72,4 +72,10 @@ public struct PhotoCaptureOptions: OptionSet, Hashable, Sendable {
     ///
     /// Constant color isn’t available when capturing RAW photos.
     static public let constantColor = PhotoCaptureOptions(rawValue: 1 << 4)
+    /// Enable Apple ProRAW capture on the photo output.
+    ///
+    /// Use ``PhotoCaptureConfiguration/dataFormat`` to request RAW-only or RAW+processed delivery per shot.
+    ///
+    /// - SeeAlso: ``PhotoCaptureConfiguration/dataFormat``
+    static public let appleProRAW = PhotoCaptureOptions(rawValue: 1 << 5)
 }

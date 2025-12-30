@@ -66,6 +66,13 @@ public struct PhotoCaptureService: OutputService, Logging {
                 output.isFastCapturePrioritizationEnabled = options.contains(.fastCapturePrioritization)
             }
         }
+        #if os(iOS)
+        if output.isAppleProRAWSupported {
+            output.isAppleProRAWEnabled = options.contains(.appleProRAW)
+        } else if options.contains(.appleProRAW) {
+            logger.error("[Apple ProRAW] Current device or configuration doesn't support Apple ProRAW.")
+        }
+        #endif
         if #available(iOS 18.0, macOS 15.0, tvOS 18.0, macCatalyst 18.0, *) {
             if output.isConstantColorSupported {
                 output.isConstantColorEnabled = options.contains(.constantColor)
@@ -102,11 +109,24 @@ extension PhotoCaptureService {
         configuration: PhotoCaptureConfiguration,
         context: Context
     ) async throws -> AVCapturePhotoSettings {
-        let photoSettings = if output.availablePhotoCodecTypes.contains(.hevc) {
-            // Capture photos in HEIF format when the device supports it.
-            AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.hevc])
-        } else {
-            AVCapturePhotoSettings()
+        let format = processPhotoFormat(for: output, configuration: configuration)
+        
+        var photoSettings: AVCapturePhotoSettings!
+       
+        #if os(iOS)
+        if configuration.dataFormat.includesAppleProRAW,
+           let rawPixelFormat = output.availableRawPhotoPixelFormatTypes.first(where: {
+               AVCapturePhotoOutput.isAppleProRAWPixelFormat($0)
+           }) {
+            photoSettings = AVCapturePhotoSettings(
+                rawPixelFormatType: rawPixelFormat,
+                processedFormat: format
+            )
+        }
+        #endif
+        
+        if photoSettings == nil {
+            photoSettings = AVCapturePhotoSettings(format: format)
         }
         
         var dimensions: CMVideoDimensions! = context.inputDevice.activeFormat
@@ -161,6 +181,28 @@ extension PhotoCaptureService {
         #endif
         
         return photoSettings
+    }
+}
+
+private extension PhotoCaptureService {
+    private func processPhotoFormat(
+        for output: AVCapturePhotoOutput,
+        configuration: PhotoCaptureConfiguration
+    ) -> [String : Any]? {
+        let availableCodecTypes = output.availablePhotoCodecTypes
+        guard !availableCodecTypes.isEmpty else {
+            return nil
+        }
+        
+        guard let codec = configuration.dataFormat.codec else {
+            return nil
+        }
+        
+        guard availableCodecTypes.contains(codec) else {
+            return nil
+        }
+        
+        return [AVVideoCodecKey : codec]
     }
 }
 

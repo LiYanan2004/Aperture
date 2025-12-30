@@ -1,6 +1,6 @@
-# Capture Photo
+# Capturing and saving still and Live Photos
 
-Captures still images or Live Photos.
+Learn how to configure the pipeline to capture still and Live Photos.
 
 ## Overview
 
@@ -28,6 +28,7 @@ Set options on ``PhotoCaptureService`` to opt into advanced capture behaviors:
 - ``PhotoCaptureOptions/fastCapturePrioritization`` to keep shot-to-shot speed steady during bursts (requires responsive capture).
 - ``PhotoCaptureOptions/autoDeferredPhotoDelivery`` to allow proxy delivery for later processing and reducing shot-to-shot latency.
 - ``PhotoCaptureOptions/constantColor`` to reduce ambient color bias to represents the correct color, such as skin colors, and more.
+- ``PhotoCaptureOptions/appleProRAW`` to enable Apple ProRAW capture on supported devices.
 
 For more information on availability and constraints, see ``PhotoCaptureOptions``.
 
@@ -36,12 +37,7 @@ For more information on availability and constraints, see ``PhotoCaptureOptions`
 Use ``PhotoCaptureConfiguration`` to set per-shot capture preferences:
 
 ```swift
-let configuration = PhotoCaptureConfiguration(
-    capturesLivePhoto: true,
-    resolution: .`12mp`,
-    dataFormat: .heif,
-    qualityPrioritization: .balanced
-)
+let configuration = PhotoCaptureConfiguration()
 ```
 
 For capturing 24MP photos, opt-in ``PhotoCaptureOptions/autoDeferredPhotoDelivery`` and set ``PhotoCaptureConfiguration/qualityPrioritization`` to `.quality`.
@@ -53,7 +49,7 @@ For capturing 24MP photos, opt-in ``PhotoCaptureOptions/autoDeferredPhotoDeliver
 
 You should use ``CameraShutterButton`` in the first place.
 
-If you want to use your custom controls, call ``Camera/takePhoto(configuration:)`` to trigger a capture and receive a ``CapturedPhoto`` value:
+If you want to use your custom controls, call ``Camera/takePhoto(configuration:dataRepresentationCustomizer:)`` to trigger a capture and receive a ``CapturedPhoto`` value:
 
 ```swift
 let capturedPhoto = try await camera.takePhoto(configuration: configuration)
@@ -61,9 +57,64 @@ let capturedPhoto = try await camera.takePhoto(configuration: configuration)
 
 ### Handling captured data
 
-``CapturedPhoto`` contains the primary image data, optional Live Photo resources, and more.
+``CapturedPhoto`` can include multiple data representations from a single shutter press, such as a processed image, a photo proxy, an Apple ProRAW DNG, or a constant color fallback photo.
 
-- ``CapturedPhoto/data`` is the primary image data.
-- ``CapturedPhoto/isProxy`` indicates deferred proxy delivery; save proxy data with PhotoKit when present.
-- ``CapturedPhoto/livePhotoMovieURL`` contains the Live Photo movie URL when available.
-- ``CapturedPhoto/constantColorFallbackPhotoData`` provides a fallback image when constant color output is not fully processed.
+Retrieve the data based on your needs via ``CapturedPhoto/data(for:)``.
+
+For photo proxy, you should save it via `PhotoKit` as soon as possible when you get that to allow post-processing.
+
+```swift
+try await PHPhotoLibrary.shared().performChanges {
+    PHAssetCreationRequest.forAsset().addResource(with: .photoProxy, data: data, options: nil)
+}
+```
+
+### Taking Apple ProRAW photos
+
+To capture Apple ProRAW, enable it on the output and set the data format per shot:
+
+```swift
+let profile = CameraCaptureProfile(sessionPreset: .photo) {
+    PhotoCaptureService(options: .appleProRAW)
+}
+
+var configuration = PhotoCaptureConfiguration(
+    dataFormat: .appleProRAW
+)
+```
+
+On supported devices, set ``PhotoCaptureConfiguration/dataFormat`` to ``PhotoCaptureConfiguration/DataFormat/appleProRAW`` for RAW-only delivery, or `.appleProRAWPlusHEIF` / `.appleProRAWPlusJPEG` to include a processed companion image.
+
+If you save Apple ProRAW + processed image to photo library, make sure you follow these rules:
+- Processed image data should be the primary data
+- Apple ProRAW data should be the alternative photo and saved via `addResource(with:fileURL:options:)`
+
+```swift
+import Photos
+
+try await PHPhotoLibrary.shared().performChanges {
+    let creationRequest = PHAssetCreationRequest.forAsset()
+    if let data = capturedPhoto.data(for: .processed) {
+        creationRequest.addResource(
+            with: .photo,
+            data: data,
+            options: nil
+        )
+    }
+
+    if let data = capturedPhoto.data(for: .appleProRAW) {
+        let uniqueURLForDNGFile = URL
+            .temporaryDirectory
+            .appending(path: "Captured ProRAW photo at \(Date.now.formatted(.iso8601)).DNG")
+        try? data.write(to: uniqueURLForDNGFile)
+        
+        let options = PHAssetResourceCreationOptions()
+        options.shouldMoveFile = true
+        creationRequest.addResource(
+            with: .alternatePhoto,
+            fileURL: uniqueURLForDNGFile,
+            options: options
+        )
+    }
+}
+```
