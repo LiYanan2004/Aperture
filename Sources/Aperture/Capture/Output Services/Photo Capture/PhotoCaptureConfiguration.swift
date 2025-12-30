@@ -63,10 +63,13 @@ public struct PhotoCaptureConfiguration: Hashable, Sendable {
         case jpeg
         
         /// Captures Apple ProRAW only without a processed companion image.
+        @available(macOS, unavailable)
         case appleProRAW
         /// Captures Apple ProRAW with a HEIF processed companion image.
+        @available(macOS, unavailable)
         case appleProRAWPlusHEIF
         /// Captures Apple ProRAW with a JPEG processed companion image.
+        @available(macOS, unavailable)
         case appleProRAWPlusJPEG
         
         /// The corresponding codec type used in an `AVCapturePhotoSettings` object for photo processing.
@@ -80,6 +83,7 @@ public struct PhotoCaptureConfiguration: Hashable, Sendable {
             }
         }
         
+        @available(macOS, unavailable)
         var includesAppleProRAW: Bool {
             switch self {
                 case .heif, .jpeg:

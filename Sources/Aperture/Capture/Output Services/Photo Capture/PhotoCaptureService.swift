@@ -111,7 +111,9 @@ extension PhotoCaptureService {
     ) async throws -> AVCapturePhotoSettings {
         let format = processPhotoFormat(for: output, configuration: configuration)
         
-        let photoSettings: AVCapturePhotoSettings
+        var photoSettings: AVCapturePhotoSettings!
+       
+        #if os(iOS)
         if configuration.dataFormat.includesAppleProRAW,
            let rawPixelFormat = output.availableRawPhotoPixelFormatTypes.first(where: {
                AVCapturePhotoOutput.isAppleProRAWPixelFormat($0)
@@ -120,7 +122,10 @@ extension PhotoCaptureService {
                 rawPixelFormatType: rawPixelFormat,
                 processedFormat: format
             )
-        } else {
+        }
+        #endif
+        
+        if photoSettings == nil {
             photoSettings = AVCapturePhotoSettings(format: format)
         }
         

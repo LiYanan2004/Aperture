@@ -44,4 +44,5 @@ From a user-interface perspective, since SwiftUI does not support locking interf
 - ``PhotoCaptureService``
 - ``PhotoCaptureOptions``
 - ``PhotoCaptureConfiguration``
+- ``PhotoFileDataRepresentationCustomizer``
 - ``CapturedPhoto``

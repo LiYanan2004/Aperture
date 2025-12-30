@@ -90,7 +90,7 @@ If you save Apple ProRAW + processed image to photo library, make sure you follo
 - Apple ProRAW data should be the alternative photo and saved via `addResource(with:fileURL:options:)`
 
 ```swift
-import PhotoKit
+import Photos
 
 try await PHPhotoLibrary.shared().performChanges {
     let creationRequest = PHAssetCreationRequest.forAsset()
@@ -103,16 +103,16 @@ try await PHPhotoLibrary.shared().performChanges {
     }
 
     if let data = capturedPhoto.data(for: .appleProRAW) {
-        let uniqueURLForDMGFile = URL
+        let uniqueURLForDNGFile = URL
             .temporaryDirectory
             .appending(path: "Captured ProRAW photo at \(Date.now.formatted(.iso8601)).DNG")
-        try? data.write(to: uniqueURLForDMGFile)
+        try? data.write(to: uniqueURLForDNGFile)
         
         let options = PHAssetResourceCreationOptions()
         options.shouldMoveFile = true
         creationRequest.addResource(
             with: .alternatePhoto,
-            fileURL: uniqueURLForDMGFile,
+            fileURL: uniqueURLForDNGFile,
             options: options
         )
     }

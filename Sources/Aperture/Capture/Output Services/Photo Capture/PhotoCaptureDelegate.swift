@@ -11,13 +11,18 @@ import SwiftUI
 final class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate, Logging {
     private var continuation: CheckedContinuation<CapturedPhoto, Error>
     private unowned var camera: Camera
-    let dataRepresentationCustomizer: (any AVCapturePhotoFileDataRepresentationCustomizer)?
+    /// Optional customizer used to generate the encoded photo data.
+    ///
+    /// - Note: This is only used on iOS where `AVCapturePhotoFileDataRepresentationCustomizer` exists.
+    ///   On macOS the property is accepted for API consistency but is ignored and `fileDataRepresentation()`
+    ///   is used instead.
+    let dataRepresentationCustomizer: (any PhotoFileDataRepresentationCustomizer)?
     
     private var capturedPhoto = CapturedPhoto()
     
     init(
         camera: Camera,
-        dataRepresentationCustomizer: (any AVCapturePhotoFileDataRepresentationCustomizer)?,
+        dataRepresentationCustomizer: (any PhotoFileDataRepresentationCustomizer)?,
         continuation: CheckedContinuation<CapturedPhoto, Error>
     ) {
         self.camera = camera
@@ -51,24 +56,38 @@ final class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate, Loggi
     ) {
         if let error {
             logger.error("There is an error when finishing processing photo: \(error.localizedDescription)")
+            return
         }
         
-        let photoData = if let dataRepresentationCustomizer {
+        let photoData: Data?
+        #if os(iOS)
+        photoData = if let dataRepresentationCustomizer {
             photo.fileDataRepresentation(with: dataRepresentationCustomizer)
         } else {
             photo.fileDataRepresentation()
         }
+        #else
+        photoData = photo.fileDataRepresentation()
+        #endif
+        
         guard let photoData else {
             logger.warning("AVCapturePhoto does not produce any data.")
             return
         }
-        if #available(iOS 18.0, macOS 15.0, *), photo.isConstantColorFallbackPhoto {
-            capturedPhoto.addPhotoData(photoData, for: .constantColorFallback)
-        } else if photo.isRawPhoto {
-            capturedPhoto.addPhotoData(photoData, for: .appleProRAW)
-        } else {
-            capturedPhoto.addPhotoData(photoData, for: .processed)
+        
+        var representation: CapturedPhoto.Representation?
+        
+        #if os(iOS)
+        if photo.isRawPhoto {
+            representation = .appleProRAW
         }
+        #endif
+
+        if #available(iOS 18.0, macOS 15.0, *), photo.isConstantColorFallbackPhoto {
+            representation = .constantColorFallback
+        }
+
+        capturedPhoto.addPhotoData(photoData, for: representation ?? .processed)
     }
     
     #if os(iOS) && !targetEnvironment(macCatalyst)

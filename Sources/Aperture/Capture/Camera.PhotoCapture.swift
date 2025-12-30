@@ -12,7 +12,7 @@ extension Camera {
     /// Takes a photo of current scene.
     nonisolated public func takePhoto(
         configuration: PhotoCaptureConfiguration,
-        dataRepresentationCustomizer: (any AVCapturePhotoFileDataRepresentationCustomizer)? = nil
+        dataRepresentationCustomizer: (any PhotoFileDataRepresentationCustomizer)? = nil
     ) async throws -> CapturedPhoto {
         let context = await coordinator.outputContext(for: PhotoCaptureService.self)
         guard let context else { throw CaptureError.noContext }
