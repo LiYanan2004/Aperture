@@ -10,7 +10,10 @@ import AVFoundation
 
 extension Camera {
     /// Takes a photo of current scene.
-    nonisolated public func takePhoto(configuration: PhotoCaptureConfiguration) async throws -> CapturedPhoto {
+    nonisolated public func takePhoto(
+        configuration: PhotoCaptureConfiguration,
+        dataRepresentationCustomizer: (any AVCapturePhotoFileDataRepresentationCustomizer)? = nil
+    ) async throws -> CapturedPhoto {
         let context = await coordinator.outputContext(for: PhotoCaptureService.self)
         guard let context else { throw CaptureError.noContext }
         
@@ -30,6 +33,7 @@ extension Camera {
             try await withCheckedThrowingContinuation { continuation in
                 let delegate = PhotoCaptureDelegate(
                     camera: self,
+                    dataRepresentationCustomizer: dataRepresentationCustomizer,
                     continuation: continuation
                 )
                 inFlightPhotoCaptureDelegates[photoSettings.uniqueID] = delegate
