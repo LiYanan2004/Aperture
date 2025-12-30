@@ -112,9 +112,10 @@ extension PhotoCaptureService {
         let format = processPhotoFormat(for: output, configuration: configuration)
         
         let photoSettings: AVCapturePhotoSettings
-        if configuration.capturesAppleProRAW, let rawPixelFormat = output.availableRawPhotoPixelFormatTypes.first(where: {
-            AVCapturePhotoOutput.isAppleProRAWPixelFormat($0)
-        }) {
+        if configuration.dataFormat.includesAppleProRAW,
+           let rawPixelFormat = output.availableRawPhotoPixelFormatTypes.first(where: {
+               AVCapturePhotoOutput.isAppleProRAWPixelFormat($0)
+           }) {
             photoSettings = AVCapturePhotoSettings(
                 rawPixelFormatType: rawPixelFormat,
                 processedFormat: format
@@ -188,11 +189,15 @@ private extension PhotoCaptureService {
             return nil
         }
         
-        guard availableCodecTypes.contains(configuration.dataFormat.codec) else {
+        guard let codec = configuration.dataFormat.codec else {
             return nil
         }
         
-        return [AVVideoCodecKey : configuration.dataFormat.codec]
+        guard availableCodecTypes.contains(codec) else {
+            return nil
+        }
+        
+        return [AVVideoCodecKey : codec]
     }
 }
 

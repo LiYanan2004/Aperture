@@ -126,9 +126,13 @@ Enable ProRAW on the output and opt in per shot.
 ```swift
 let camera = Camera(device: .automatic, profile: .photo(options: .appleProRAW))
 
-let configuration = PhotoCaptureConfiguration(capturesAppleProRAW: true)
+let configuration = PhotoCaptureConfiguration(
+    dataFormat: .appleProRAW
+)
 let photo = try await camera.takePhoto(configuration: configuration)
 ```
+
+Use `.appleProRAWPlusHEIF` or `.appleProRAWPlusJPEG` if you want a processed companion image.
 
 ### Custom Output Services
 

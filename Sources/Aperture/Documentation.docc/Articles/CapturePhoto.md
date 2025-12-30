@@ -28,7 +28,7 @@ Set options on ``PhotoCaptureService`` to opt into advanced capture behaviors:
 - ``PhotoCaptureOptions/fastCapturePrioritization`` to keep shot-to-shot speed steady during bursts (requires responsive capture).
 - ``PhotoCaptureOptions/autoDeferredPhotoDelivery`` to allow proxy delivery for later processing and reducing shot-to-shot latency.
 - ``PhotoCaptureOptions/constantColor`` to reduce ambient color bias to represents the correct color, such as skin colors, and more.
-- ``PhotoCaptureOptions/appleProRAW`` to enable Apple ProRAW capture on supported devices (set before starting the session).
+- ``PhotoCaptureOptions/appleProRAW`` to enable Apple ProRAW capture on supported devices.
 
 For more information on availability and constraints, see ``PhotoCaptureOptions``.
 
@@ -71,21 +71,23 @@ try await PHPhotoLibrary.shared().performChanges {
 
 ### Taking Apple ProRAW photos
 
-To capture Apple ProRAW, enable it on the output and opt-in per shot:
+To capture Apple ProRAW, enable it on the output and set the data format per shot:
 
 ```swift
 let profile = CameraCaptureProfile(sessionPreset: .photo) {
     PhotoCaptureService(options: .appleProRAW)
 }
 
-var configuration = PhotoCaptureConfiguration(capturesAppleProRAW: true)
+var configuration = PhotoCaptureConfiguration(
+    dataFormat: .appleProRAW
+)
 ```
 
-On supported device, you will get an ProRAW image as well as the process image via ``CapturedPhoto``
+On supported devices, set ``PhotoCaptureConfiguration/dataFormat`` to ``PhotoCaptureConfiguration/DataFormat/appleProRAW`` for RAW-only delivery, or `.appleProRAWPlusHEIF` / `.appleProRAWPlusJPEG` to include a processed companion image.
 
-When you save Apple ProRAW + processed image to photo library, make sure you follow this rule in order to get the correct behavior:
+If you save Apple ProRAW + processed image to photo library, make sure you follow these rules:
 - Processed image data should be the primary data
-- Apple ProRAW data should be the alternative photo asnd saved via `addResource(with:fileURL:options:)`
+- Apple ProRAW data should be the alternative photo and saved via `addResource(with:fileURL:options:)`
 
 ```swift
 import PhotoKit

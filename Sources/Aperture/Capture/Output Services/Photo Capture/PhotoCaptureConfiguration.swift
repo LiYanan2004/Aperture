@@ -11,15 +11,7 @@ import AVFoundation
 public struct PhotoCaptureConfiguration: Hashable, Sendable {
     /// A boolean value indicating whether to capture a live photo.
     public var capturesLivePhoto: Bool = false
-    /// A boolean value indicating whether to capture Apple ProRAW data.
-    ///
-    /// Requires to opt-in ``PhotoCaptureOptions/appleProRAW`` and device support.
-    ///
-    /// You can access Apple ProRAW data and processed image data via ``CapturedPhoto/data(for:)``.
-    public var capturesAppleProRAW: Bool = false
     /// Preferred data format of captured photo.
-    ///
-    /// When capturing Apple ProRAW, this controls the processed companion image format.
     public var dataFormat: DataFormat = .heif
     /// Preferred output resolution for photo capture.
     ///
@@ -53,13 +45,11 @@ public struct PhotoCaptureConfiguration: Hashable, Sendable {
     /// Create a configuration for photo capturing.
     public init(
         capturesLivePhoto: Bool = false,
-        capturesAppleProRAW: Bool = false,
         resolution: Resolution = .`12mp`,
         dataFormat: DataFormat = .heif,
         qualityPrioritization: AVCapturePhotoOutput.QualityPrioritization = .balanced
     ) {
         self.capturesLivePhoto = capturesLivePhoto
-        self.capturesAppleProRAW = capturesAppleProRAW
         self.dataFormat = dataFormat
         self.preferredResolution = resolution
         self.qualityPrioritization = qualityPrioritization
@@ -72,11 +62,30 @@ public struct PhotoCaptureConfiguration: Hashable, Sendable {
         /// Captures photo in JPEG file format.
         case jpeg
         
-        /// The corresponding codec type that used in an `AVCapturePhotoSettings` object.
-        public var codec: AVVideoCodecType {
+        /// Captures Apple ProRAW only without a processed companion image.
+        case appleProRAW
+        /// Captures Apple ProRAW with a HEIF processed companion image.
+        case appleProRAWPlusHEIF
+        /// Captures Apple ProRAW with a JPEG processed companion image.
+        case appleProRAWPlusJPEG
+        
+        /// The corresponding codec type used in an `AVCapturePhotoSettings` object for photo processing.
+        public var codec: AVVideoCodecType? {
             switch self {
                 case .heif: .hevc
                 case .jpeg: .jpeg
+                case .appleProRAW: nil
+                case .appleProRAWPlusHEIF: .hevc
+                case .appleProRAWPlusJPEG: .jpeg
+            }
+        }
+        
+        var includesAppleProRAW: Bool {
+            switch self {
+                case .heif, .jpeg:
+                    return false
+                case .appleProRAW, .appleProRAWPlusHEIF, .appleProRAWPlusJPEG:
+                    return true
             }
         }
     }
