@@ -18,12 +18,7 @@ public struct PhotoCaptureOptions: OptionSet, Hashable, Sendable {
     public init(rawValue: UInt) {
         self.rawValue = rawValue
     }
-    
-    /// A set of default enabled options enabled by `AVFoundation` framework.
-    ///
-    /// Since `Aperture` requires iOS 17 or later, zero shutter lag is enabled when supported by default.
-    static public let `default`: PhotoCaptureOptions = [.zeroShutterLag]
-    
+
     /// Capture photos with zero shutter lag when supported.
     ///
     /// Zero shutter lag uses a short ring buffer of recent frames so the captured photo can better match the moment the user intended to capture.
@@ -78,4 +73,28 @@ public struct PhotoCaptureOptions: OptionSet, Hashable, Sendable {
     ///
     /// - SeeAlso: ``PhotoCaptureConfiguration/dataFormat``
     static public let appleProRAW = PhotoCaptureOptions(rawValue: 1 << 5)
+}
+
+extension PhotoCaptureOptions {
+    /// A set of default enabled options enabled by `AVFoundation` framework.
+    ///
+    /// Since `Aperture` requires iOS 17 or later, zero shutter lag is enabled when supported by default.
+    static public let `default`: PhotoCaptureOptions = [.zeroShutterLag]
+    
+    /// A set of options that would help reducing shot-to-shot lantency.
+    ///
+    /// - note: ``autoDeferredPhotoDelivery`` is not included in this set since proxy photo can only be processed via `PhotoKit`.
+    static public let prioritizingShotToShotLatency: PhotoCaptureOptions = [
+        .zeroShutterLag, .responsiveCapture, .fastCapturePrioritization
+    ]
+    
+    /// A set of options to allow capturing `24MP` photos.
+    ///
+    /// > Important:
+    /// > `24MP` photos will be only delivered as photo proxy and needs post-processing via `PhotoKit`. Under certain conditions (e.g. flash is on), you may still receive a processed photo at `12MP`.
+    /// >
+    /// > For more guidance on caprturing `24MP` photo, see ``PhotoCaptureConfiguration/preferredResolution``.
+    static public let captures24MPPhotos: PhotoCaptureOptions = [
+        .autoDeferredPhotoDelivery
+    ]
 }

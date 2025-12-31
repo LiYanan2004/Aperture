@@ -62,33 +62,44 @@ public struct PhotoCaptureConfiguration: Hashable, Sendable {
         /// Captures photo in JPEG file format.
         case jpeg
         
-        /// Captures Apple ProRAW only without a processed companion image.
+        /// Captures photo in bayer RAW format.
+        ///
+        /// Opt-in ``PhotoCaptureOptions/appleProRAW`` to capture Apple ProRAW.
         @available(macOS, unavailable)
-        case appleProRAW
-        /// Captures Apple ProRAW with a HEIF processed companion image.
+        case raw
+        /// Captures photo in bayer RAW format with a HEIF processed companion image.
+        ///
+        /// Opt-in ``PhotoCaptureOptions/appleProRAW`` to capture Apple ProRAW.
         @available(macOS, unavailable)
-        case appleProRAWPlusHEIF
-        /// Captures Apple ProRAW with a JPEG processed companion image.
+        case rawPlusHEIF
+        /// Captures photo in bayer RAW format with a JPEG processed companion image.
+        ///
+        /// Opt-in ``PhotoCaptureOptions/appleProRAW`` to capture Apple ProRAW.
         @available(macOS, unavailable)
-        case appleProRAWPlusJPEG
+        case rawPlusJPEG
         
         /// The corresponding codec type used in an `AVCapturePhotoSettings` object for photo processing.
         public var codec: AVVideoCodecType? {
             switch self {
-                case .heif: .hevc
-                case .jpeg: .jpeg
-                case .appleProRAW: nil
-                case .appleProRAWPlusHEIF: .hevc
-                case .appleProRAWPlusJPEG: .jpeg
+                case .rawPlusHEIF:
+                    fallthrough
+                case .heif:
+                    AVVideoCodecType.hevc
+                case .rawPlusJPEG:
+                    fallthrough
+                case .jpeg:
+                    AVVideoCodecType.jpeg
+                case .raw:
+                    nil
             }
         }
         
         @available(macOS, unavailable)
-        var includesAppleProRAW: Bool {
+        var includesRAW: Bool {
             switch self {
                 case .heif, .jpeg:
                     return false
-                case .appleProRAW, .appleProRAWPlusHEIF, .appleProRAWPlusJPEG:
+                case .raw, .rawPlusHEIF, .rawPlusJPEG:
                     return true
             }
         }

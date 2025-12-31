@@ -40,16 +40,37 @@ Use ``PhotoCaptureConfiguration`` to set per-shot capture preferences:
 let configuration = PhotoCaptureConfiguration()
 ```
 
+You can configure the preferred resolution, Live Photo, and more.
+
+##### 24MP Photos
+
 For capturing 24MP photos, opt-in ``PhotoCaptureOptions/autoDeferredPhotoDelivery`` and set ``PhotoCaptureConfiguration/qualityPrioritization`` to `.quality`.
 
 > tip:
 > You can use the convenience method ``PhotoCaptureConfiguration/configuredFor24MPPhotoCapture()`` to setup the configuration
 
+##### RAW Photo
+
+To request RAW delivery, set ``PhotoCaptureConfiguration/dataFormat`` to `.raw` for RAW-only delivery, or `.rawPlusHEIF` / `.rawPlusJPEG` to include a processed companion image.
+
+Availability depends on the device and active camera:
+- Apple ProRAW is supported on iPhone 12 Pro / Pro Max and later Pro models.
+- Bayer RAW is available on supported iPhone and iPad devices only when using a single camera (e.g. wide angle camera, ultra-wide camera, etc.).
+
+By default, it captures Bayer RAW unless you opt-in ``PhotoCaptureOptions/appleProRAW`` on the output.
+
+```swift
+let profile = CameraCaptureProfile(sessionPreset: .photo) {
+    PhotoCaptureService(options: .appleProRAW)
+}
+let configuration = PhotoCaptureConfiguration(dataFormat: .raw)
+```
+
 ### Capturing a photo
 
 You should use ``CameraShutterButton`` in the first place.
 
-If you want to use your custom controls, call ``Camera/takePhoto(configuration:dataRepresentationCustomizer:)`` to trigger a capture and receive a ``CapturedPhoto`` value:
+You can also capture a photo programmatically via ``Camera/takePhoto(configuration:dataRepresentationCustomizer:)`` and receive a ``CapturedPhoto`` value:
 
 ```swift
 let capturedPhoto = try await camera.takePhoto(configuration: configuration)
@@ -61,7 +82,7 @@ let capturedPhoto = try await camera.takePhoto(configuration: configuration)
 
 Retrieve the data based on your needs via ``CapturedPhoto/data(for:)``.
 
-For photo proxy, you should save it via `PhotoKit` as soon as possible when you get that to allow post-processing.
+For photo proxy, you should save it via `PhotoKit` as soon as possible when you get that to allow post-processing. Especially when you requested a `24MP` photo capture.
 
 ```swift
 try await PHPhotoLibrary.shared().performChanges {
@@ -69,25 +90,11 @@ try await PHPhotoLibrary.shared().performChanges {
 }
 ```
 
-### Taking Apple ProRAW photos
-
-To capture Apple ProRAW, enable it on the output and set the data format per shot:
-
-```swift
-let profile = CameraCaptureProfile(sessionPreset: .photo) {
-    PhotoCaptureService(options: .appleProRAW)
-}
-
-var configuration = PhotoCaptureConfiguration(
-    dataFormat: .appleProRAW
-)
-```
-
-On supported devices, set ``PhotoCaptureConfiguration/dataFormat`` to ``PhotoCaptureConfiguration/DataFormat/appleProRAW`` for RAW-only delivery, or `.appleProRAWPlusHEIF` / `.appleProRAWPlusJPEG` to include a processed companion image.
-
-If you save Apple ProRAW + processed image to photo library, make sure you follow these rules:
+If you save Apple ProRAW with a processed companion image to the photo library, follow these rules:
 - Processed image data should be the primary data
 - Apple ProRAW data should be the alternative photo and saved via `addResource(with:fileURL:options:)`
+
+This example saves the processed image and Apple ProRAW data to the photo library:
 
 ```swift
 import Photos

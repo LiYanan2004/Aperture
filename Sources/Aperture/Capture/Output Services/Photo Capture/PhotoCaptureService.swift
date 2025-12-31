@@ -114,14 +114,17 @@ extension PhotoCaptureService {
         var photoSettings: AVCapturePhotoSettings!
        
         #if os(iOS)
-        if configuration.dataFormat.includesAppleProRAW,
-           let rawPixelFormat = output.availableRawPhotoPixelFormatTypes.first(where: {
-               AVCapturePhotoOutput.isAppleProRAWPixelFormat($0)
-           }) {
-            photoSettings = AVCapturePhotoSettings(
-                rawPixelFormatType: rawPixelFormat,
-                processedFormat: format
-            )
+        if configuration.dataFormat.includesRAW {
+            if let rawPixelFormat = output.availableRawPhotoPixelFormatTypes.first(where: {
+                options.contains(.appleProRAW) ? AVCapturePhotoOutput.isAppleProRAWPixelFormat($0) : AVCapturePhotoOutput.isBayerRAWPixelFormat($0)
+            }) {
+                photoSettings = AVCapturePhotoSettings(
+                    rawPixelFormatType: rawPixelFormat,
+                    processedFormat: format
+                )
+            } else {
+                logger.warning("[RAW] Current capture device does not support RAW capture. Fallback to deliver a processed image. Only Apple ProRAW supports capturing from fusion camera.")
+            }
         }
         #endif
         
@@ -145,7 +148,11 @@ extension PhotoCaptureService {
         }
         
         photoSettings.maxPhotoDimensions = dimensions
-        photoSettings.photoQualityPrioritization = configuration.qualityPrioritization
+        
+        setPhotoQualityPrioritizationIfSupported(
+            configuration.qualityPrioritization,
+            for: photoSettings
+        )
         #if os(iOS)
         photoSettings.livePhotoMovieFileURL = configuration.capturesLivePhoto ? URL.movieFileURL : nil
         #endif
@@ -181,6 +188,34 @@ extension PhotoCaptureService {
         #endif
         
         return photoSettings
+    }
+    
+    private func setPhotoQualityPrioritizationIfSupported(
+        _ prioritization: AVCapturePhotoOutput.QualityPrioritization,
+        for photoSettings: AVCapturePhotoSettings
+    ) {
+        #if os(iOS)
+        guard _isSettingPhotoPrioritizationSupported(on: photoSettings) else {
+            logger.warning("Setting quality priotitization is not supported when capturing a Bayer RAW photo.")
+            return
+        }
+        #endif
+        
+        photoSettings.photoQualityPrioritization = prioritization
+    }
+    
+    @available(macOS, unavailable)
+    private func _isSettingPhotoPrioritizationSupported(
+        on photoSettings: AVCapturePhotoSettings
+    ) -> Bool {
+        let rawPhotoPixelFormat = photoSettings.rawPhotoPixelFormatType
+        
+        guard AVCapturePhotoOutput.isBayerRAWPixelFormat(rawPhotoPixelFormat) else {
+            return true // processed photo always support setting prioritization.
+        }
+        
+        // Apple ProRAW is a special bayer RAW, and it supports setting prioritization.
+        return AVCapturePhotoOutput.isAppleProRAWPixelFormat(rawPhotoPixelFormat)
     }
 }
 
