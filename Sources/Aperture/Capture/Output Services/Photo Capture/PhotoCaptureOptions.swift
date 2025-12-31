@@ -66,6 +66,7 @@ public struct PhotoCaptureOptions: OptionSet, Hashable, Sendable {
     /// - the flash mode must be set to `.on`or `.auto`
     ///
     /// Constant color isn’t available when capturing RAW photos.
+    @available(iOS 18, macOS 15, *)
     static public let constantColor = PhotoCaptureOptions(rawValue: 1 << 4)
     /// Enable Apple ProRAW capture on the photo output.
     ///
