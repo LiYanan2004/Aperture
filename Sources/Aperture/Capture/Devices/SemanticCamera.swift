@@ -50,7 +50,7 @@ extension SemanticCamera {
 
 // MARK: - AnySemanticCamera
 
-/// A type-erases camera device.
+/// A type-erased camera device.
 public struct AnySemanticCamera {
     /// The base camera device object.
     public let base: any SemanticCamera

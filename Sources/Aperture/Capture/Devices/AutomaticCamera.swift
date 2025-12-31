@@ -36,7 +36,7 @@ public struct AutomaticCamera: SemanticCamera {
 extension SemanticCamera where Self == AutomaticCamera {
     /// An automatic camera that resolves to the system-preferred device when available.
     ///
-    /// This might result in single camera instead of fusion camera, if you're working on iOS app, use ``builtInCamera`` instead.
+    /// This might result in a single camera instead of a fusion camera; if you're working on an iOS app, use ``builtInCamera`` instead.
     public static var systemPreferred: AutomaticCamera {
         .init(preference: .systemPreferred)
     }
