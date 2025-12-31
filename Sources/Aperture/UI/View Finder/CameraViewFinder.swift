@@ -72,9 +72,8 @@ public struct CameraViewFinder: View {
             }
             .blur(radius: camera.captureSessionState == .running ? 0 : 15, opaque: true)
             .modifier(_FlipViewModifier(trigger: position ?? .platformDefault))
-            .onChange(of: camera.device.id, initial: true) {
-                guard let builtInCamera = camera.device as? any BuiltInCamera else { return }
-                position = builtInCamera.position
+            .onChange(of: camera.device.uniqueID, initial: true) {
+                position = camera.device.position
             }
             .onChange(of: videoGravity, initial: true) {
                 camera.coordinator.cameraPreview.setVideoGravity(videoGravity.avLayerVideoGravity)

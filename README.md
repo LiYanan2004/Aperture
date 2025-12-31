@@ -46,7 +46,7 @@ import Aperture
 import SwiftUI
 
 struct CameraScreen: View {
-    @State private var camera = Camera(device: .automatic, profile: .photo())
+    @State private var camera = Camera(device: .builtInCamera, profile: .photo())
 
     var body: some View {
         ZStack {
@@ -96,7 +96,7 @@ This produces the user interface shown in the poster image.
 let profile = CameraCaptureProfile(sessionPreset: .photo) {
     PhotoCaptureService(options: [.zeroShutterLag, .responsiveCapture])
 }
-let camera = Camera(device: .automatic, profile: profile)
+let camera = Camera(device: .builtInCamera, profile: profile)
 ```
 
 You can update output services at anytime. But keep in mind that this triggers a lengthy capture pipeline reconfiguration.
@@ -124,13 +124,13 @@ let photo = try await camera.takePhoto(configuration: configuration)
 Enable ProRAW on the output and opt in per shot.
 
 ```swift
-let camera = Camera(device: .automatic, profile: .photo(options: .appleProRAW))
+let camera = Camera(device: .builtInCamera, profile: .photo(options: .appleProRAW))
 
 let configuration = PhotoCaptureConfiguration(dataFormat: .raw)
 let photo = try await camera.takePhoto(configuration: configuration)
 ```
 
-Use `.appleProRAWPlusHEIF` or `.appleProRAWPlusJPEG` if you want a processed companion image.
+Use `.rawPlusHEIF` or `.rawPlusJPEG` if you want a processed companion image.
 
 ### Custom Output Services
 

@@ -9,9 +9,9 @@ import AVFoundation
 
 /// A built-in telephoto rear camera.
 @available(macOS, unavailable)
-public struct TelephotoCamera: BuiltInCamera {
+public struct TelephotoCamera: SemanticCamera {
     public let captureDevice: AVCaptureDevice?
-    public let position: CameraPosition = .back
+    public let position: CameraPosition? = .back
 
     /// Creates a telephoto rear camera.
     public init() {
@@ -24,7 +24,7 @@ public struct TelephotoCamera: BuiltInCamera {
 }
 
 @available(macOS, unavailable)
-extension CameraDevice where Self == TelephotoCamera {
+extension SemanticCamera where Self == TelephotoCamera {
     /// Telephoto rear camera.
     public static var telephotoCamera: TelephotoCamera {
         .init()

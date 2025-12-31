@@ -11,7 +11,7 @@ import AVFoundation
 extension CameraViewFinder {
     struct _ZoomGesture: Gesture {
         var camera: Camera
-        private var device: (any CameraDevice)? {
+        private var device: (any SemanticCamera)? {
             camera.device
         }
         
