@@ -125,7 +125,7 @@ extension CameraShutterButton {
 #Preview {
     CameraShutterButton(
         camera: Camera(
-            device: .automatic,
+            device: .builtInCamera,
             profile: .photo()
         )
     ) { photo in

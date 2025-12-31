@@ -14,7 +14,7 @@ Declare one or more output services in a ``CameraCaptureProfile`` and pass the p
 let profile = CameraCaptureProfile(sessionPreset: .photo) {
     PhotoCaptureService(options: .default.union(.responsiveCapture))
 }
-let camera = Camera(device: .automatic, profile: profile)
+let camera = Camera(device: .builtInCamera, profile: profile)
 ```
 
 ### Updating output services
@@ -60,5 +60,5 @@ let profile = CameraCaptureProfile(sessionPreset: .photo) {
     PhotoCaptureService()
     MetadataOutputService()
 }
-let camera = Camera(device: .automatic, profile: profile)
+let camera = Camera(device: .builtInCamera, profile: profile)
 ```

@@ -16,7 +16,7 @@ Add a photo capture service to the profile you pass into ``Camera``:
 let profile = CameraCaptureProfile(sessionPreset: .photo) {
     PhotoCaptureService(options: [.zeroShutterLag, .responsiveCapture])
 }
-let camera = Camera(device: .automatic, profile: profile)
+let camera = Camera(device: .builtInCamera, profile: profile)
 ```
 
 ### Requesting photo pipeline features

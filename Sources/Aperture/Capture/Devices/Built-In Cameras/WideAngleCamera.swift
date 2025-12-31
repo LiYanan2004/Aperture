@@ -8,9 +8,9 @@
 import AVFoundation
 
 /// A built-in wide angle camera.
-public struct WideAngleCamera: BuiltInCamera {
+public struct WideAngleCamera: SemanticCamera {
     public let captureDevice: AVCaptureDevice?
-    public let position: CameraPosition
+    public let position: CameraPosition?
 
     /// Creates a wide angle camera for the given position.
     public init(position: CameraPosition = .platformDefault) {
@@ -23,7 +23,7 @@ public struct WideAngleCamera: BuiltInCamera {
     }
 }
 
-extension CameraDevice where Self == WideAngleCamera {
+extension SemanticCamera where Self == WideAngleCamera {
     /// Wide angle camera for the given position.
     public static func wideAngleCamera(
         position: CameraPosition = .platformDefault

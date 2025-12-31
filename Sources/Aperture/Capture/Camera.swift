@@ -19,8 +19,9 @@ public final class Camera: SendableMetatype, Logging {
     let coordinator: CameraCoordinator
 
     private var _cameraSwitchingTask: Task<Void, Error>?
+    private var _automaticCameraObserver: AutomaticCameraObserver?
     /// The currently active capture video device.
-    public var device: any CameraDevice {
+    public var device: any SemanticCamera {
         willSet {
             _cameraSwitchingTask?.cancel()
             _cameraSwitchingTask = Task { @CameraActor in
@@ -60,7 +61,7 @@ public final class Camera: SendableMetatype, Logging {
 
     /// Create a camera instance with a specific device and profile.
     public init(
-        device: any CameraDevice,
+        device: any SemanticCamera,
         profile: CameraCaptureProfile
     ) {
         self.device = device
@@ -83,6 +84,8 @@ public final class Camera: SendableMetatype, Logging {
                 self.state.camera = self
             }
         }
+        
+        self._automaticCameraObserver = AutomaticCameraObserver(camera: self)
     }
     
     // MARK: - Session Management
@@ -168,6 +171,63 @@ extension Camera {
     static public var isAccessible: Bool {
         get async {
             await AVCaptureDevice.requestAccess(for: .video)
+        }
+    }
+}
+
+// MARK: - Auxiliary
+
+fileprivate extension Camera {
+    final class AutomaticCameraObserver: NSObject {
+        unowned let camera: Camera
+        
+        public init(camera: Camera) {
+            self.camera = camera
+            super.init()
+            
+            AVCaptureDevice.self.addObserver(
+                self,
+                forKeyPath: "systemPreferredCamera",
+                options: [.new],
+                context: nil
+            )
+            AVCaptureDevice.self.addObserver(
+                self,
+                forKeyPath: "userPreferredCamera",
+                options: [.new],
+                context: nil
+            )
+        }
+        
+        public override func observeValue(
+            forKeyPath keyPath: String?,
+            of object: Any?,
+            change: [NSKeyValueChangeKey: Any]?,
+            context: UnsafeMutableRawPointer?
+        ) {
+            switch keyPath {
+                case "systemPreferredCamera":
+                    guard let automaticCamera = camera.device as? AutomaticCamera,
+                          automaticCamera.preference == .systemPreferred
+                    else { return }
+                    Task { @CameraActor in
+                        camera.coordinator.cameraInputDevice = (change?[.newKey] as? AVCaptureDevice) ?? BuiltInCamera().captureDevice
+                    }
+                case "userPreferredCamera":
+                    guard let automaticCamera = camera.device as? AutomaticCamera,
+                          automaticCamera.preference == .userPreferred
+                    else { return }
+                    Task { @CameraActor in
+                        camera.coordinator.cameraInputDevice = (change?[.newKey] as? AVCaptureDevice) ?? BuiltInCamera().captureDevice
+                    }
+                default:
+                    super.observeValue(
+                        forKeyPath: keyPath,
+                        of: object,
+                        change: change,
+                        context: context
+                    )
+            }
         }
     }
 }

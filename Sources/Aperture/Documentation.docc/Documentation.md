@@ -16,6 +16,7 @@ From a user-interface perspective, since SwiftUI does not support locking interf
 
 - ``Camera``
 - ``CameraCaptureProfile``
+- ``CameraFlash``
 
 ### Integrating camera interface
 
@@ -27,9 +28,7 @@ From a user-interface perspective, since SwiftUI does not support locking interf
 
 ### Choosing a camera
 
-- <doc:CameraDevice>
-- <doc:BuiltInCamera>
-- ``ExternalCamera``
+- ``SemanticCamera``
 
 ### Connecting outputs
 

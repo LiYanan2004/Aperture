@@ -31,14 +31,24 @@ public struct CameraFlipButton<Label: View>: View {
 
     public var body: some View {
         Button {
-            guard let builtInCamera = camera.device as? any BuiltInCamera else { return }
-            let newPosition = builtInCamera.position.flipped
-            camera.device = AutomaticCamera(position: newPosition)
+            guard let cameraPosition = camera.device.position else { return }
+            let newPosition = cameraPosition.flipped
+            
+            switch camera.device {
+                case _ as BuiltInCamera:
+                    camera.device = BuiltInCamera(position: newPosition)
+                case _ as WideAngleCamera:
+                    camera.device = WideAngleCamera(position: newPosition)
+                default:
+                    return
+            }
+            
             self.position = newPosition
         } label: {
             label
         }
         .sensoryFeedback(.selection, trigger: position)
+        .disabled(!(camera.device is BuiltInCamera || camera.device is WideAngleCamera))
     }
 }
 

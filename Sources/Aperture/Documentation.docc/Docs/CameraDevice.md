@@ -1,24 +1,37 @@
-# ``CameraDevice``
+# ``SemanticCamera``
 
 ## Topics
 
-- ``AnyCameraDevice``
-- ``CameraPosition``
-- ``CameraFlash``
+### Automatic camera
 
-### Properties
+- ``AutomaticCamera``
+- ``AutomaticCamera/Preference``
+- ``SemanticCamera/systemPreferred``
+- ``SemanticCamera/userPreferred``
 
-- ``CameraDevice/id``
-- ``CameraDevice/isFusionCamera``
-
-### Built-in Cameras
+### Built-in cameras
 
 - ``BuiltInCamera``
-- ``AutomaticCamera``
+- ``CameraPosition``
 - ``WideAngleCamera``
 - ``UltraWideAngleCamera``
 - ``TelephotoCamera``
 
-### External Cameras
+### External cameras
 
 - ``ExternalCamera``
+- ``ContinuityCamera``
+- ``DeskViewCamera``
+
+### Inspecting device properties
+
+- ``SemanticCamera/captureDevice``
+- ``SemanticCamera/localizedName``
+- ``SemanticCamera/position``
+- ``SemanticCamera/uniqueID``
+- ``SemanticCamera/isFusionCamera``
+- ``SemanticCamera/subscript(dynamicMember:)``
+
+### Substituting types
+
+- ``AnySemanticCamera``

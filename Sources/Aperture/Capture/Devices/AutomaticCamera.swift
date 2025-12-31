@@ -6,61 +6,43 @@
 //
 
 import AVFoundation
+import Foundation
+import Observation
 
-/// A built-in camera that consists of multiple available lens (if available), or single wide angle camera.
-public struct AutomaticCamera: BuiltInCamera {
-    public let captureDevice: AVCaptureDevice?
-    public let position: CameraPosition
-    
-    /// Creates an instance for the given position.
-    public init(position: CameraPosition = .platformDefault) {
-        self.position = position
-        self.captureDevice = AVCaptureDevice.DiscoverySession(
-            deviceTypes: AutomaticCamera.supportedDeviceTypes,
-            mediaType: .video,
-            position: AVCaptureDevice.Position(position: position)
-        ).devices.first
+/// A camera device that resolves to a preferred camera and falls back to the platform default built-in camera.
+public struct AutomaticCamera: SemanticCamera {
+    /// A preference that determines which preferred camera to use.
+    public enum Preference: Sendable {
+        case systemPreferred
+        case userPreferred
     }
     
-    #if os(macOS)
-    private static let supportedDeviceTypes = [AVCaptureDevice.DeviceType.builtInWideAngleCamera]
-    #elseif os(iOS)
-    private static let supportedDeviceTypes = [AVCaptureDevice.DeviceType.builtInTripleCamera, .builtInDualWideCamera, .builtInDualCamera, .builtInWideAngleCamera]
-    #endif
+    public var captureDevice: AVCaptureDevice? {
+        switch preference {
+            case .systemPreferred:
+                AVCaptureDevice.systemPreferredCamera ?? BuiltInCamera().captureDevice
+            case .userPreferred:
+                AVCaptureDevice.userPreferredCamera ?? BuiltInCamera().captureDevice
+        }
+    }
+    public let preference: Preference
+    
+    /// Creates an automatic camera using the specified preference.
+    public init(preference: Preference) {
+        self.preference = preference
+    }
 }
 
-extension CameraDevice where Self == AutomaticCamera {
-    /// An automatic camera for the default device position.
-    @_transparent
-    public static var automatic: AutomaticCamera {
-        #if os(iOS)
-        rearCamera
-        #else
-        frontCamera
-        #endif
+extension SemanticCamera where Self == AutomaticCamera {
+    /// An automatic camera that resolves to the system-preferred device when available.
+    ///
+    /// This might result in single camera instead of fusion camera, if you're working on iOS app, use ``builtInCamera`` instead.
+    public static var systemPreferred: AutomaticCamera {
+        .init(preference: .systemPreferred)
     }
     
-    /// An automatic camera for a specific device position.
-    public static func automatic(position: CameraPosition) -> AutomaticCamera {
-        .init(position: position)
-    }
-    
-    /// A front camera of the current device.
-    public static var frontCamera: AutomaticCamera {
-        .init(position: .front)
-    }
-    
-    /// A rear camera of the current device.
-    @available(macOS, unavailable)
-    public static var rearCamera: AutomaticCamera {
-        .init(position: .back)
-    }
-    
-    /// A rear camera of the current device.
-    @_transparent
-    @available(*, deprecated, renamed: "rearCamera")
-    @available(macOS, unavailable)
-    public static var backCamera: AutomaticCamera {
-        rearCamera
+    /// An automatic camera that resolves to the user-preferred device when available.
+    public static var userPreferred: AutomaticCamera {
+        .init(preference: .userPreferred)
     }
 }
