@@ -123,7 +123,7 @@ extension PhotoCaptureService {
                     processedFormat: format
                 )
             } else {
-                logger.warning("[RAW] Current capture device does not support RAW capture. Only Apple ProRAW supports capturing from fusion camera.")
+                logger.warning("[RAW] Current capture device does not support RAW capture. Fallback to deliver a processed image. Only Apple ProRAW supports capturing from fusion camera.")
             }
         }
         #endif

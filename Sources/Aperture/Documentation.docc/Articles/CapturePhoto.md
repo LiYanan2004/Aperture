@@ -49,15 +49,15 @@ For capturing 24MP photos, opt-in ``PhotoCaptureOptions/autoDeferredPhotoDeliver
 > tip:
 > You can use the convenience method ``PhotoCaptureConfiguration/configuredFor24MPPhotoCapture()`` to setup the configuration
 
-##### RAW Photo 
+##### RAW Photo
 
 To request RAW delivery, set ``PhotoCaptureConfiguration/dataFormat`` to `.raw` for RAW-only delivery, or `.rawPlusHEIF` / `.rawPlusJPEG` to include a processed companion image.
-
-If you want Apple ProRAW, also opt-in ``PhotoCaptureOptions/appleProRAW`` on the output.
 
 Availability depends on the device and active camera:
 - Apple ProRAW is supported on iPhone 12 Pro / Pro Max and later Pro models.
 - Bayer RAW is available on supported iPhone and iPad devices only when using a single camera (e.g. wide angle camera, ultra-wide camera, etc.).
+
+By default, it captures Bayer RAW unless you opt-in ``PhotoCaptureOptions/appleProRAW`` on the output.
 
 ```swift
 let profile = CameraCaptureProfile(sessionPreset: .photo) {
