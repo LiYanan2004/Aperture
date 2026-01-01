@@ -78,6 +78,6 @@ extension AnySemanticCamera: SemanticCamera {
     }
     
     public static func == (lhs: AnySemanticCamera, rhs: AnySemanticCamera) -> Bool {
-        lhs.eraseToAnyEquatable() == rhs.eraseToAnyEquatable()
+        lhs.base.eraseToAnyEquatable() == rhs.base.eraseToAnyEquatable()
     }
 }

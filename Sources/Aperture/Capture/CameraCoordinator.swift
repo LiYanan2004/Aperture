@@ -141,8 +141,10 @@ public final class CameraCoordinator: NSObject, Logging {
             }
         }
         #if os(iOS)
-        withCurrentCaptureDevice { device in
-            device.videoZoomFactor = 1 / displayZoomFactorMultiplier
+        if device.isVirtualDevice && !device.constituentDevices.isEmpty {
+            withCurrentCaptureDevice { device in
+                device.videoZoomFactor = 1 / displayZoomFactorMultiplier
+            }
         }
         observeDeviceZoomFactor()
         #endif
