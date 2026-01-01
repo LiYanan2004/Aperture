@@ -119,6 +119,15 @@ CameraShutterButton(camera: camera, configuration: configuration) { photo in
 let photo = try await camera.takePhoto(configuration: configuration)
 ```
 
+#### Portrait Photos
+
+Opt-in `PhotoCaptureOptions.deliversDepthData` to get embedded depth and Portrait Effect Matte in the photo data. 
+
+```swift
+let camera = Camera(device: .builtInCamera, profile: .photo(options: .deliversDepthData))
+let photo = try await camera.takePhoto(configuration: PhotoCaptureConfiguration())
+```
+
 #### Apple ProRAW
 
 Enable ProRAW on the output and opt in per shot.
