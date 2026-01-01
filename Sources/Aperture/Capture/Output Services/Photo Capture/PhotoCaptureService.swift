@@ -51,6 +51,14 @@ public struct PhotoCaptureService: OutputService, Logging {
             output.maxPhotoDimensions = maxSupportedPhotoDimensions
         }
         
+        if output.isDepthDataDeliverySupported {
+            output.isDepthDataDeliveryEnabled = options.contains(.deliversDepthData)
+        }
+        
+        if output.isPortraitEffectsMatteDeliverySupported {
+            output.isPortraitEffectsMatteDeliveryEnabled = options.contains(.deliversDepthData)
+        }
+        
         #if os(iOS)
         output.isLivePhotoCaptureEnabled = output.isLivePhotoCaptureSupported
         if output.isAutoDeferredPhotoDeliverySupported {
@@ -131,6 +139,9 @@ extension PhotoCaptureService {
         if photoSettings == nil {
             photoSettings = AVCapturePhotoSettings(format: format)
         }
+        
+        photoSettings.isDepthDataDeliveryEnabled = output.isDepthDataDeliveryEnabled
+        photoSettings.isPortraitEffectsMatteDeliveryEnabled = output.isPortraitEffectsMatteDeliveryEnabled
         
         var dimensions: CMVideoDimensions! = context.inputDevice.activeFormat
             .supportedMaxPhotoDimensions

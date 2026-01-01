@@ -11,7 +11,7 @@ import Foundation
 ///
 /// These options correspond to optional behaviors in the underlying photo capture pipeline.
 ///
-/// - Important: Setting an option only *requests* the behavior. The system may ignore it depending on the active device, session preset / format, per-capture settings, and runtime conditions.
+/// - Important: Setting an option only *requests* the behavior. The system may ignore it depending on the active device, session preset or format, per-capture settings, and runtime conditions.
 public struct PhotoCaptureOptions: OptionSet, Hashable, Sendable {
     public let rawValue: UInt
     
@@ -19,7 +19,7 @@ public struct PhotoCaptureOptions: OptionSet, Hashable, Sendable {
         self.rawValue = rawValue
     }
 
-    /// Capture photos with zero shutter lag when supported.
+    /// Requests zero shutter lag to capture the moment the user intended to capture.
     ///
     /// Zero shutter lag uses a short ring buffer of recent frames so the captured photo can better match the moment the user intended to capture.
     ///
@@ -30,25 +30,25 @@ public struct PhotoCaptureOptions: OptionSet, Hashable, Sendable {
     /// - Bracket photos
     /// - Constituent photo delivery
     static public let zeroShutterLag = PhotoCaptureOptions(rawValue: 1 << 0)
-    /// Enable responsive capture to reduce shot-to-shot latency.
+    /// Requests responsive capture to reduce shot-to-shot latency.
     ///
     /// When enabled, the system may overlap capture and processing so a new capture can begin while a previous capture is still processing.
     ///
     /// - Important: This can improve shot-to-shot time, but increases peak memory usage in the photo output.
     ///
-    /// Responsive capture **requires ``PhotoCaptureOptions/zeroShutterLag`` to be enabled**.
+    /// Responsive capture **requires ``PhotoCaptureOptions/zeroShutterLag``**.
     ///
     /// This option may not take effect when the app is under memory pressure, in which case you may prefer (or need) to opt out.
     ///
     /// - SeeAlso: ``PhotoCaptureConfiguration/preferredResolution``
     static public let responsiveCapture = PhotoCaptureOptions(rawValue: 1 << 1)
-    /// Prioritize faster capture performance over quality for responsive capture.
+    /// Prioritizes faster capture performance over quality for responsive capture.
     ///
     /// When enabled, the system can detect multiple captures over a short period of time and adapt photo quality from the highest-quality setting toward a more balanced setting to maintain shot-to-shot time.
     ///
     /// This **requires ``responsiveCapture`` to be enabled**.
     static public let fastCapturePrioritization = PhotoCaptureOptions(rawValue: 1 << 2)
-    /// Allow deferred photo delivery to improve shot-to-shot performance.
+    /// Requests deferred photo delivery to improve shot-to-shot performance.
     ///
     /// When enabled, the system may deliver a lightly processed `AVCaptureDeferredPhotoProxy` at capture time, and finish full-quality processing later.
     ///
@@ -59,7 +59,7 @@ public struct PhotoCaptureOptions: OptionSet, Hashable, Sendable {
     /// >
     /// > As in, even when this is opt-in, the system may still deliver an immediate fully processed photo when a proxy isn’t appropriate (e.g. flash is on, etc.)
     static public let autoDeferredPhotoDelivery = PhotoCaptureOptions(rawValue: 1 << 3)
-    /// Uses a flash / no-flash pair to reduce the influence of ambient illumination on the output image.
+    /// Requests to use a flash / no-flash pair to reduce the influence of ambient illumination on the output image.
     ///
     /// Based on [WWDC session](https://developer.apple.com/videos/play/wwdc2024/10162/), constant color requires:
     /// - iPhone 14 series or later, iPad Pro (2024) or later
@@ -68,12 +68,17 @@ public struct PhotoCaptureOptions: OptionSet, Hashable, Sendable {
     /// Constant color isn’t available when capturing RAW photos.
     @available(iOS 18, macOS 15, *)
     static public let constantColor = PhotoCaptureOptions(rawValue: 1 << 4)
-    /// Enable Apple ProRAW capture on the photo output.
+    /// Requests Apple ProRAW capture on the photo output.
     ///
     /// Use ``PhotoCaptureConfiguration/dataFormat`` to request RAW-only or RAW+processed delivery per shot.
     ///
     /// - SeeAlso: ``PhotoCaptureConfiguration/dataFormat``
     static public let appleProRAW = PhotoCaptureOptions(rawValue: 1 << 5)
+    
+    /// Requests depth data and portrait effects matte delivery.
+    ///
+    /// The system may ignore this option if the active device or format doesn't support depth delivery; when enabled, depth data is embedded in the captured photo and a Portrait Effects Matte is delivered when available.
+    static public let deliversDepthData = PhotoCaptureOptions(rawValue: 1 << 6)
 }
 
 extension PhotoCaptureOptions {

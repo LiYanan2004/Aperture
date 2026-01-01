@@ -60,6 +60,43 @@ public struct CapturedPhoto: Sendable, Hashable {
     /// A Boolean value indicating whether captured photo is a Live Photo.
     public var isLivePhoto: Bool { livePhotoMovieURL != nil }
     
+    /// Depth data associated with the processed photo, if available.
+    ///
+    /// - SeeAlso: ``PhotoCaptureOptions/deliversDepthData``
+    public var depthData: AVDepthData? {
+        guard let data = data(for: .processed),
+              let imageSource = CGImageSourceCreateWithData(data as CFData, nil)
+        else { return nil }
+        
+        return [
+            kCGImageAuxiliaryDataTypeDisparity,
+            kCGImageAuxiliaryDataTypeDepth
+        ].first(byUnwrapping: { type in
+            let auxiliaryInfo = CGImageSourceCopyAuxiliaryDataInfoAtIndex(imageSource, 0, type) as? [AnyHashable: Any]
+            guard let auxiliaryInfo else { return nil }
+            return try? AVDepthData(fromDictionaryRepresentation: auxiliaryInfo)
+        })
+    }
+    
+    /// The portrait effects matte associated with the processed photo, if available.
+    ///
+    /// - SeeAlso: ``PhotoCaptureOptions/deliversDepthData``
+    public var portraitEffectMatte: AVPortraitEffectsMatte? {
+        guard let data = data(for: .processed),
+              let imageSource = CGImageSourceCreateWithData(data as CFData, nil)
+        else { return nil }
+
+        guard let auxiliaryInfo = CGImageSourceCopyAuxiliaryDataInfoAtIndex(
+            imageSource,
+            0,
+            kCGImageAuxiliaryDataTypePortraitEffectsMatte
+        ) as? [AnyHashable: Any] else {
+            return nil
+        }
+
+        return try? AVPortraitEffectsMatte(fromDictionaryRepresentation: auxiliaryInfo)
+    }
+    
     internal init() { }
 }
 

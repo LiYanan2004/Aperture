@@ -27,6 +27,7 @@ Set options on ``PhotoCaptureService`` to opt into advanced capture behaviors:
 - ``PhotoCaptureOptions/responsiveCapture`` to overlap capture and processing for faster shot-to-shot time (requires zero shutter lag).
 - ``PhotoCaptureOptions/fastCapturePrioritization`` to keep shot-to-shot speed steady during bursts (requires responsive capture).
 - ``PhotoCaptureOptions/autoDeferredPhotoDelivery`` to allow proxy delivery for later processing and reducing shot-to-shot latency.
+- ``PhotoCaptureOptions/deliversDepthData`` to request depth data and portrait effects matte delivery when supported.
 - ``PhotoCaptureOptions/constantColor`` to reduce ambient color bias to represents the correct color, such as skin colors, and more.
 - ``PhotoCaptureOptions/appleProRAW`` to enable Apple ProRAW capture on supported devices.
 
