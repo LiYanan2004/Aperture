@@ -73,11 +73,13 @@ public struct PhotoCaptureOptions: OptionSet, Hashable, Sendable {
     /// Use ``PhotoCaptureConfiguration/dataFormat`` to request RAW-only or RAW+processed delivery per shot.
     ///
     /// - SeeAlso: ``PhotoCaptureConfiguration/dataFormat``
+    @available(macOS, unavailable)
     static public let appleProRAW = PhotoCaptureOptions(rawValue: 1 << 5)
     
     /// Requests depth data and portrait effects matte delivery.
     ///
     /// The system may ignore this option if the active device or format doesn't support depth delivery; when enabled, depth data is embedded in the captured photo and a Portrait Effects Matte is delivered when available.
+    @available(macOS, unavailable)
     static public let deliversDepthData = PhotoCaptureOptions(rawValue: 1 << 6)
 }
 

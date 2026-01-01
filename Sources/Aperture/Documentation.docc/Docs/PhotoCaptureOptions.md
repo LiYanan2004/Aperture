@@ -8,7 +8,6 @@ Options are requests: the system may ignore them based on device capabilities, t
 
 ### Getting pipeline options
 
-
 - ``PhotoCaptureOptions/zeroShutterLag``
 - ``PhotoCaptureOptions/responsiveCapture``
 - ``PhotoCaptureOptions/fastCapturePrioritization``

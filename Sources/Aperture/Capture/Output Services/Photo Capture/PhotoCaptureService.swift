@@ -50,21 +50,7 @@ public struct PhotoCaptureService: OutputService, Logging {
         if let maxSupportedPhotoDimensions {
             output.maxPhotoDimensions = maxSupportedPhotoDimensions
         }
-        
-        if output.isDepthDataDeliverySupported {
-            output.isDepthDataDeliveryEnabled = options.contains(.deliversDepthData)
-        }
-        
-        if output.isPortraitEffectsMatteDeliverySupported {
-            output.isPortraitEffectsMatteDeliveryEnabled = options.contains(.deliversDepthData)
-        }
-        
-        #if os(iOS)
-        output.isLivePhotoCaptureEnabled = output.isLivePhotoCaptureSupported
-        if output.isAutoDeferredPhotoDeliverySupported {
-            output.isAutoDeferredPhotoDeliveryEnabled = options.contains(.autoDeferredPhotoDelivery)
-        }
-        #endif
+    
         if output.isZeroShutterLagSupported {
             output.isZeroShutterLagEnabled = options.contains(.zeroShutterLag)
         }
@@ -75,10 +61,20 @@ public struct PhotoCaptureService: OutputService, Logging {
             }
         }
         #if os(iOS)
+        output.isLivePhotoCaptureEnabled = output.isLivePhotoCaptureSupported
+        if output.isAutoDeferredPhotoDeliverySupported {
+            output.isAutoDeferredPhotoDeliveryEnabled = options.contains(.autoDeferredPhotoDelivery)
+        }
         if output.isAppleProRAWSupported {
             output.isAppleProRAWEnabled = options.contains(.appleProRAW)
         } else if options.contains(.appleProRAW) {
             logger.error("[Apple ProRAW] Current device or configuration doesn't support Apple ProRAW.")
+        }
+        if output.isDepthDataDeliverySupported {
+            output.isDepthDataDeliveryEnabled = options.contains(.deliversDepthData)
+        }
+        if output.isPortraitEffectsMatteDeliverySupported {
+            output.isPortraitEffectsMatteDeliveryEnabled = options.contains(.deliversDepthData)
         }
         #endif
         if #available(iOS 18.0, macOS 15.0, tvOS 18.0, macCatalyst 18.0, *) {
@@ -139,10 +135,7 @@ extension PhotoCaptureService {
         if photoSettings == nil {
             photoSettings = AVCapturePhotoSettings(format: format)
         }
-        
-        photoSettings.isDepthDataDeliveryEnabled = output.isDepthDataDeliveryEnabled
-        photoSettings.isPortraitEffectsMatteDeliveryEnabled = output.isPortraitEffectsMatteDeliveryEnabled
-        
+         
         var dimensions: CMVideoDimensions! = context.inputDevice.activeFormat
             .supportedMaxPhotoDimensions
             .first(where: {
@@ -166,6 +159,8 @@ extension PhotoCaptureService {
         )
         #if os(iOS)
         photoSettings.livePhotoMovieFileURL = configuration.capturesLivePhoto ? URL.movieFileURL : nil
+        photoSettings.isDepthDataDeliveryEnabled = output.isDepthDataDeliveryEnabled
+        photoSettings.isPortraitEffectsMatteDeliveryEnabled = output.isPortraitEffectsMatteDeliveryEnabled
         #endif
         
         let flash = await context.coordinator.cameraCoordinator.camera.flash
@@ -192,7 +187,7 @@ extension PhotoCaptureService {
             _enableConstantColorIfRequestedAndEligible()
         }
         
-        #if os(iOS) || os(tvOS)
+        #if os(iOS)
         if let previewPhotoPixelFormatType = photoSettings.availablePreviewPhotoPixelFormatTypes.first {
             photoSettings.previewPhotoFormat = [kCVPixelBufferPixelFormatTypeKey as String: previewPhotoPixelFormatType]
         }
